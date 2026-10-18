@@ -1,6 +1,12 @@
-# Tebille
+<p align="center">
+  <img src="mis-gastos-app/icons/icon-512.png" alt="Logo de Tebille" width="140">
+</p>
 
-**Tus gastos, ingresos, saldo y tarjetas de crédito en un solo lugar.**
+<h1 align="center">Tebille</h1>
+
+<p align="center"><b>Tus gastos, ingresos, saldo y tarjetas de crédito en un solo lugar.</b></p>
+
+<p align="center"><a href="https://tebille.pages.dev">tebille.pages.dev</a></p>
 
 Tebille es una aplicación web de finanzas personales pensada para Colombia (pesos colombianos, bancos y tasas locales). Funciona en el navegador, se instala en el celular como una app (iPhone y Android) y sigue funcionando sin internet.
 
