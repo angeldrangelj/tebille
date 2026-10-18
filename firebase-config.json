@@ -1,0 +1,15 @@
+// Copy and paste this into your JavaScript code to initialize the Firebase SDK.
+// You will also need to load the Firebase SDK.
+// See https://firebase.google.com/docs/web/setup for more details.
+
+firebase.initializeApp({
+  "projectId": "tebille-app-co-e6f6a",
+  "appId": "1:1054037524461:web:04957dc9e586bfb061b1e4",
+  "storageBucket": "tebille-app-co-e6f6a.firebasestorage.app",
+  "apiKey": "AIzaSyDQTeDjABhINqRKIZa4Jra3JCT3YTpIMUk",
+  "authDomain": "tebille-app-co-e6f6a.firebaseapp.com",
+  "messagingSenderId": "1054037524461",
+  "measurementId": "G-3XWZPEN177",
+  "projectNumber": "1054037524461",
+  "version": "2"
+});

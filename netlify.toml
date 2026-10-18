@@ -1,0 +1,17 @@
+[build]
+  publish = "mis-gastos-app"
+  functions = "netlify/functions"
+
+# Verificación de la app Android (Trusted Web Activity)
+[[headers]]
+  for = "/.well-known/assetlinks.json"
+  [headers.values]
+    Content-Type = "application/json"
+    Access-Control-Allow-Origin = "*"
+
+# APK de Android para descargar directo en el teléfono
+[[headers]]
+  for = "/descargas/*.apk"
+  [headers.values]
+    Content-Type = "application/vnd.android.package-archive"
+    Content-Disposition = "attachment; filename=Tebille.apk"

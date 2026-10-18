@@ -1,0 +1,29 @@
+# --- SECRETOS: nunca subir ---
+# Llave de firma de Android y sus contraseñas
+android/
+*.keystore
+*.jks
+signing-key-info.txt
+
+# Variables de entorno y credenciales locales
+.env
+.env.*
+
+# --- Archivos de herramientas locales ---
+.claude/
+.netlify/
+.wrangler/
+.firebase/
+firebase-debug.log
+*.log
+node_modules/
+
+# --- Binarios generados ---
+# El APK se publica en mis-gastos-app/descargas/; esta copia suelta no hace falta
+/Tebille.apk
+*.aab
+
+# --- Sistema ---
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -1,0 +1,35 @@
+{
+  "name": "Tebille",
+  "short_name": "Tebille",
+  "description": "Registra ingresos y gastos, conoce tu saldo y planea el pago de tus tarjetas de crédito.",
+  "lang": "es",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F3F6F5",
+  "theme_color": "#1F6F5C",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Anotar gasto",
+      "short_name": "Gasto",
+      "description": "Abre Tebille con el formulario de gasto listo",
+      "url": "./?nuevo=gasto",
+      "icons": [{ "src": "icons/atajo-gasto.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Anotar ingreso",
+      "short_name": "Ingreso",
+      "description": "Abre Tebille con el formulario de ingreso listo",
+      "url": "./?nuevo=ingreso",
+      "icons": [{ "src": "icons/atajo-ingreso.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

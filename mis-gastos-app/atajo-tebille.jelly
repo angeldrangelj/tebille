@@ -1,0 +1,26 @@
+import Shortcuts
+// Versión del atajo: 19 (elige Gasto o Ingreso primero)
+// Atajo "Tebille": anota un gasto o un ingreso en Tebille sin abrir la app.
+// Lo más fácil: en Tebille → Atajo del iPhone → "Copiar código para Jellycuts" (ya trae tus datos).
+// Si usas este archivo, cambia PEGA_AQUI_TU_USUARIO y PEGA_AQUI_TU_CLAVE por los que muestra Tebille.
+// No compartas este código: contiene tu clave secreta.
+
+// 1. Primero: ¿gasto o ingreso?
+list(items: ["Gasto", "Ingreso"]) >> Tipos
+choose(list: Tipos, prompt: "¿Qué quieres anotar?", multiple: false, all: false) >> Tipo
+
+// 2. Las categorías dependen de lo que elegiste: Tebille las envía ya como lista
+var urlCategorias = "https://tebille.pages.dev/api/categorias?tipo=${Tipo}"
+downloadURL(url: urlCategorias, method: GET, headers: {}, requestType: Json, requestJSON: {}) >> Categorias
+
+// 3. Monto, categoría y descripción
+askForInput(prompt: "¿Cuánto? (${Tipo})", type: Number, allowDecimal: false, allowNegative: false) >> Monto
+choose(list: Categorias, prompt: "¿Qué categoría?", multiple: false, all: false) >> Categoria
+askForInput(prompt: "Descripción (opcional)", type: Text) >> Descripcion
+encodeURL(url: "${Categoria}") >> CategoriaURL
+encodeURL(url: "${Descripcion}") >> DescripcionURL
+
+// 4. Enviar a Tebille y avisar
+var urlTebille = "https://tebille.pages.dev/api/gasto?u=PEGA_AQUI_TU_USUARIO&k=PEGA_AQUI_TU_CLAVE&tipo=${Tipo}&monto=${Monto}&cat=${CategoriaURL}&desc=${DescripcionURL}"
+downloadURL(url: urlTebille, method: GET, headers: {}, requestType: Json, requestJSON: {}) >> Respuesta
+sendNotification(title: "Tebille", body: "${Respuesta}", sound: false)

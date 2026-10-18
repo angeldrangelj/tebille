@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Tebille</title>
+<meta name="description" content="Registra tus ingresos y gastos, conoce tu saldo, sigue tu presupuesto y planea el pago de tus tarjetas de crédito.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#F3F6F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0F1614" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tebille">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: libro de cuentas personal — saldo arriba, luego el mes (entra / sale / queda), formulario + desglose, movimientos, tarjetas */
+:root{
+  --bg:#F3F6F5; --surface:#FFFFFF; --fg:#14201C; --muted:#5B6B65; --line:#DCE4E1;
+  --accent:#1F6F5C; --accent-soft:#E2F0EB; --warn:#B7791F; --bad:#B4413A; --good:#2F7D4F; --in:#5BAE8E;
+  --display:"Familjen Grotesk",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  --c1:#1F6F5C; --c2:#3B6FB6; --c3:#B7791F; --c4:#8A4FA8; --c5:#C2524A; --c6:#2E8A8A; --c7:#6B7D2A; --c8:#A65E8C; --c9:#6E7A76;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0F1614; --surface:#17211E; --fg:#E4ECE9; --muted:#93A39D; --line:#2A3833;
+  --accent:#5FC0A3; --accent-soft:#1D3530; --warn:#E0A84A; --bad:#E07B73; --good:#6CC28E; --in:#3E8C72;
+  --c1:#5FC0A3; --c2:#7AA6E6; --c3:#E0A84A; --c4:#C08ADB; --c5:#E07B73; --c6:#62C4C4; --c7:#A9BE5A; --c8:#D894C0; --c9:#9AA7A3;
+  color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:1080px;margin:0 auto;
+  padding-top:calc(20px + env(safe-area-inset-top,0px));padding-bottom:calc(48px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:20px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:1.8rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.05rem;font-weight:600}
+h3{font-size:1rem;font-weight:600}
+.label{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px}
+.month{display:flex;align-items:center;gap:6px}
+.month span{min-width:9.5em;text-align:center;font-family:var(--display);font-weight:600;font-size:1.05rem}
+.iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:10px;width:40px;height:40px;display:grid;place-items:center;font-size:1.2rem}
+.iconbtn:hover{border-color:var(--accent)}
+
+.balance{background:var(--accent);color:var(--surface);border-radius:14px;padding:20px 22px;display:grid;gap:4px}
+.balance .label{color:inherit;opacity:.8}
+.balance .big{font-size:2.4rem}
+.balance .sub{color:inherit;opacity:.9}
+.balance.neg{background:var(--bad)}
+.balance .reserve{margin-top:6px;padding-top:10px;border-top:1px solid color-mix(in srgb,currentColor 30%,transparent);display:flex;flex-wrap:wrap;gap:4px 18px;font-size:.9rem}
+.balance .reserve b{font-family:var(--mono);font-weight:500}
+.balance button{justify-self:start;margin-top:6px;background:none;border:1px solid currentColor;color:inherit;border-radius:8px;padding:6px 12px;font-size:.85rem;opacity:.9}
+
+.summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.summary>div{background:var(--surface);padding:16px 18px;display:grid;gap:6px;align-content:start;min-width:0}
+.big{font-family:var(--mono);font-size:2rem;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mid{font-family:var(--mono);font-size:1.2rem;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.pos{color:var(--good)} .negc{color:var(--bad)}
+.meter{height:8px;border-radius:4px;background:var(--accent-soft);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:4px;transition:width .3s}
+.meter.warn i{background:var(--warn)} .meter.bad i{background:var(--bad)}
+.sub{color:var(--muted);font-size:.85rem}
+.pill{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:99px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.pill.warn{color:var(--warn);background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.pill.bad{color:var(--bad);background:color-mix(in srgb,var(--bad) 14%,transparent)}
+
+.cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:20px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:16px;align-content:start;min-width:0}
+form{display:grid;gap:12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{border:0;background:none;border-radius:7px;padding:8px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px color-mix(in srgb,var(--fg) 15%,transparent)}
+.seg button[data-tipo="gasto"][aria-pressed="true"]{color:var(--bad)}
+.seg button[data-tipo="ingreso"][aria-pressed="true"]{color:var(--good)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:grid;gap:4px;min-width:0}
+.field label,.flabel{font-size:.8rem;color:var(--muted);font-weight:500}
+input,select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:10px 11px;min-width:0;font-size:16px}
+input:focus,select:focus{border-color:var(--accent);outline:none}
+#f-monto{font-family:var(--mono);font-size:1.4rem}
+.cats{display:flex;flex-wrap:wrap;gap:6px}
+.cat{border:1px solid var(--line);background:var(--bg);border-radius:99px;padding:6px 12px;font-size:.88rem;display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none}
+.cat[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.primary{background:var(--accent);color:var(--surface);border:0;border-radius:8px;padding:11px 18px;font-weight:600;text-decoration:none;display:inline-block}
+.primary:hover{filter:brightness(1.08)}
+.ghost{background:none;border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.ghost.sm,.primary.sm{padding:7px 12px;font-size:.88rem}
+.hint{font-size:.8rem;color:var(--muted)}
+
+.bars{display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:7.5em minmax(0,1fr) auto;align-items:center;gap:10px;font-size:.9rem;background:none;border:0;padding:0;text-align:left;width:100%}
+.bar .track{height:12px;background:var(--accent-soft);border-radius:3px;overflow:hidden}
+.bar .track i{display:block;height:100%;border-radius:3px}
+.bar .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:.85rem;text-align:right}
+.bar.dim{opacity:.4}
+.trendhead{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:8px}
+.legend{display:flex;gap:12px;font-size:.78rem;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.trend{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;height:130px}
+.trend>div{display:grid;grid-template-rows:1fr auto;gap:4px;text-align:center;min-width:0}
+.trend .pair{display:flex;align-items:flex-end;justify-content:center;gap:3px}
+.trend b{display:block;width:40%;max-width:18px;border-radius:3px 3px 0 0;min-height:2px}
+.trend b.i{background:var(--in)} .trend b.g{background:var(--line)}
+.trend .cur b.g{background:var(--accent)}
+.trend small{font-size:.72rem;color:var(--muted);text-transform:capitalize}
+
+.list{display:grid}
+.item{display:grid;grid-template-columns:3.2em minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.day{font-family:var(--mono);font-size:.8rem;color:var(--muted);line-height:1.2}
+.day strong{display:block;font-size:1.1rem;color:var(--fg);font-weight:500}
+.desc{min-width:0}
+.desc .t{font-weight:500;overflow-wrap:anywhere}
+.desc .m{font-size:.8rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.item .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500;white-space:nowrap}
+.item.ingreso .amt{color:var(--good)}
+.item.pago .amt{color:var(--muted)}
+.tiny{display:flex;gap:2px}
+.tiny button{background:none;border:0;color:var(--muted);padding:6px 8px;border-radius:6px;font-size:.8rem}
+.tiny button:hover{color:var(--fg);background:var(--accent-soft)}
+.tiny button.confirm{color:var(--bad);font-weight:600}
+.empty{color:var(--muted);padding:20px 0;text-align:center;display:grid;gap:6px}
+.listhead{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center}
+.listhead select{width:auto;max-width:100%}
+
+/* tarjetas */
+.tcsum{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.tcsum>div{background:var(--bg);border-radius:10px;padding:12px 14px;display:grid;gap:2px;min-width:0}
+.tclist{display:grid;gap:12px}
+.tc{border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:12px;min-width:0}
+.tc-top{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:flex-start}
+.tc-name{min-width:0}
+.tc-name .n{font-weight:600;overflow-wrap:anywhere}
+.tc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tc-grid>div{display:grid;gap:2px;min-width:0}
+.tc-plan{background:var(--accent-soft);border-radius:10px;padding:12px 14px;display:grid;gap:6px}
+.tc-plan .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tc-plan select{width:auto;padding:5px 8px;background:var(--surface)}
+.tc-plan .cuota{font-family:var(--mono);font-size:1.3rem;font-weight:500}
+.tc-inline{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:end;border-top:1px dashed var(--line);padding-top:12px}
+.tc-inline.two{grid-template-columns:minmax(0,1fr) minmax(0,10em) auto}
+.warnbox{border:1px solid var(--warn);color:var(--warn);border-radius:8px;padding:8px 12px;font-size:.85rem}
+.tip{font-size:.85rem;color:var(--muted);border-left:3px solid var(--accent);padding:2px 0 2px 10px}
+details.addtc{border:1px dashed var(--line);border-radius:12px;padding:0}
+details.addtc>summary{list-style:none;cursor:pointer;padding:14px 16px;font-weight:600;color:var(--accent)}
+details.addtc>summary::-webkit-details-marker{display:none}
+details.addtc[open]>summary{border-bottom:1px solid var(--line)}
+details.addtc form{padding:16px}
+.row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+
+.banner{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;border:1px solid var(--accent);background:var(--accent-soft);border-radius:10px;padding:10px 14px;font-size:.9rem}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
+.backup{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;font-size:.9rem;max-width:calc(100% - 32px);z-index:10}
+.status{font-size:.78rem;color:var(--muted)}
+/* menú de 3 rayas y vistas */
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.vista-titulo{font-size:1.05rem;margin-left:auto}
+.fuera{display:none!important}
+.scrim{position:fixed;inset:0;background:color-mix(in srgb,#000 45%,transparent);opacity:0;visibility:hidden;transition:opacity .2s,visibility .2s;z-index:20}
+.scrim.abierto{opacity:1;visibility:visible}
+.drawer{position:fixed;top:0;bottom:0;left:0;width:min(320px,86vw);background:var(--surface);border-right:1px solid var(--line);z-index:21;
+  display:flex;flex-direction:column;gap:2px;overflow-y:auto;transform:translateX(-105%);visibility:hidden;transition:transform .22s ease,visibility .22s;
+  padding:calc(14px + env(safe-area-inset-top,0px)) 12px calc(16px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.drawer.abierto{transform:none;visibility:visible}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;padding:0 4px 10px;font-family:var(--display);font-size:1.25rem}
+.drawer a{display:grid;gap:1px;padding:11px 12px;border-radius:10px;color:var(--fg);text-decoration:none;font-weight:600}
+.drawer a span{font-weight:400;font-size:.8rem;color:var(--muted)}
+.drawer a:hover{background:var(--bg)}
+.drawer a[aria-current="page"]{background:var(--accent-soft);color:var(--accent)}
+.drawer-sep{height:1px;background:var(--line);margin:8px 4px}
+.drawer-apk{border:1px solid var(--accent)}
+.drawer-ver{padding:10px 12px 0}
+.drawer a.drawer-autor{display:block;padding:2px 12px;font-weight:400;font-size:.8rem;color:var(--muted)}
+.drawer a.drawer-autor b{color:var(--fg)}
+.acerca-head{display:flex;gap:14px;align-items:center}
+.acerca-head img{border-radius:14px;flex:none}
+.acerca-head h2{font-size:1.4rem}
+.acerca-autor{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:14px}
+.autor-nombre{font-family:var(--display);font-size:1.5rem;font-weight:700}
+.autor-bio{font-size:.95rem;max-width:42ch}
+.contactos{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.contacto{display:grid;gap:2px;border:1px solid var(--line);border-radius:10px;padding:12px 14px;color:var(--fg);text-decoration:none}
+.contacto:hover{border-color:var(--accent)}
+.contacto .mono{font-size:.95rem}
+.ios-pasos{margin:0;padding:0;list-style:none;counter-reset:paso;display:grid;gap:12px}
+.ios-pasos li{counter-increment:paso;display:grid;grid-template-columns:2.2em minmax(0,1fr);column-gap:12px;row-gap:2px;align-items:start}
+.ios-pasos li::before{content:counter(paso);grid-row:span 2;width:2.2em;height:2.2em;border-radius:50%;background:var(--accent);color:var(--surface);display:grid;place-items:center;font-weight:700}
+.ios-pasos li b{font-size:1rem}
+.ios-pasos li span{color:var(--muted);font-size:.9rem}
+.ios-ico{width:1.25em;height:1.25em;vertical-align:-.25em;color:var(--accent)}
+.ios-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:2px 8px;color:var(--fg);white-space:nowrap}
+.ios-nota{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);padding:10px 12px;border-radius:0 8px 8px 0;font-size:.9rem}
+.ios-ok{border:1px solid var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:10px 14px;font-weight:600}
+#iosPanel a{color:var(--accent)}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);font-weight:600;font-size:inherit;text-decoration:underline;text-underline-offset:2px}
+.cuenta{display:grid;gap:12px}
+.cuenta .or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:.8rem}
+.cuenta .or::before,.cuenta .or::after{content:"";flex:1;height:1px;background:var(--line)}
+.copybox{display:grid;gap:6px;min-width:0}
+.copybox code{display:block;font-family:var(--mono);font-size:.78rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;overflow-wrap:anywhere;white-space:pre-wrap;max-height:9em;overflow:auto}
+.steps{margin:0;padding-left:1.3em;display:grid;gap:6px;font-size:.9rem}
+
+@media (max-width:820px){.cols{grid-template-columns:1fr}}
+@media (max-width:560px){.summary{grid-template-columns:1fr 1fr}.summary>div:last-child{grid-column:1/-1}.tc-grid,.row3{grid-template-columns:1fr 1fr}}
+@media (max-width:440px){.row2{grid-template-columns:1fr}.big{font-size:1.7rem}.balance .big{font-size:2rem}.bar{grid-template-columns:6em minmax(0,1fr) auto}.item{grid-template-columns:2.6em minmax(0,1fr) auto}.item .tiny{grid-column:2/-1;justify-content:flex-end;margin-top:-6px}.tcsum{grid-template-columns:1fr}.tc-inline,.tc-inline.two{grid-template-columns:1fr 1fr}.tc-inline .field:first-child{grid-column:1/-1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <button class="iconbtn" id="menuBtn" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="drawer">
+        <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+      </button>
+      <div>
+        <h1>Tebille</h1>
+        <div class="status"><span id="status">Guardado en este dispositivo</span> <button type="button" class="linkbtn" id="statusBtn">Activar la nube</button></div>
+      </div>
+    </div>
+    <h2 class="vista-titulo" id="vistaTitulo" hidden></h2>
+    <div class="month" data-view="inicio">
+      <button class="iconbtn" id="prev" aria-label="Mes anterior">‹</button>
+      <span id="monthLabel"></span>
+      <button class="iconbtn" id="next" aria-label="Mes siguiente">›</button>
+    </div>
+  </header>
+
+  <div class="banner" id="installBanner" hidden>
+    <span id="installText"></span>
+    <span class="actions"><a class="primary" id="installHow" href="#iphone" hidden>Cómo instalar</a><button class="primary" id="installBtn" hidden>Instalar</button><button class="ghost" id="installClose">Ahora no</button></span>
+  </div>
+
+  <section class="balance" id="balance" data-view="inicio" aria-label="Saldo actual">
+    <span class="label">Saldo actual</span>
+    <span class="big" id="bSaldo">—</span>
+    <span class="sub" id="bSub"></span>
+    <div class="reserve" id="bReserve" hidden></div>
+    <button type="button" id="bAjustar">Ajustar saldo</button>
+  </section>
+
+  <section class="summary" aria-label="Resumen del mes" data-view="inicio">
+    <div>
+      <span class="label">Entró este mes</span>
+      <span class="mid pos" id="sIng">—</span>
+      <span class="sub" id="sIngSub"></span>
+    </div>
+    <div>
+      <span class="label">Salió este mes</span>
+      <span class="mid" id="sGas">—</span>
+      <div class="meter" id="sMeter"><i style="width:0"></i></div>
+      <span class="sub" id="sBudget"></span>
+    </div>
+    <div>
+      <span class="label">Balance del mes</span>
+      <span class="mid" id="sBal">—</span>
+      <span class="sub" id="sBalSub"></span>
+    </div>
+  </section>
+
+  <div class="cols" data-view="inicio">
+    <section class="panel" aria-labelledby="formTitle">
+      <h2 id="formTitle">Registrar movimiento</h2>
+      <form id="form" autocomplete="off">
+        <div class="seg" role="group" aria-label="Tipo de movimiento">
+          <button type="button" data-tipo="gasto" aria-pressed="true">Gasto</button>
+          <button type="button" data-tipo="ingreso" aria-pressed="false">Ingreso</button>
+        </div>
+        <div class="field">
+          <label for="f-monto">Monto</label>
+          <input id="f-monto" inputmode="decimal" placeholder="0" required>
+        </div>
+        <div class="field">
+          <label for="f-desc">Descripción</label>
+          <input id="f-desc" placeholder="Ej. mercado de la semana" maxlength="80">
+        </div>
+        <div class="field">
+          <span class="flabel">Categoría</span>
+          <div class="cats" id="catPicker" role="group" aria-label="Categoría"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="f-fecha">Fecha</label>
+            <input id="f-fecha" type="date" required>
+          </div>
+          <div class="field">
+            <label for="f-metodo" id="metodoLabel">Pagado con</label>
+            <select id="f-metodo">
+              <option>Efectivo</option><option>Débito</option><option>Crédito</option><option>Transferencia</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="f-tarjeta-wrap" hidden>
+          <label for="f-tarjeta">¿Con qué tarjeta?</label>
+          <select id="f-tarjeta"></select>
+          <span class="hint">La compra se suma a la deuda de esa tarjeta y no baja tu saldo hasta que la pagues.</span>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit" id="saveBtn">Agregar gasto</button>
+          <button class="ghost" type="button" id="cancelEdit" hidden>Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="catTitle">
+      <div class="listhead"><h2 id="catTitle">En qué se va el dinero</h2><span class="sub">Toca una categoría para filtrar</span></div>
+      <div class="bars" id="bars"></div>
+      <div>
+        <div class="trendhead">
+          <span class="label">Últimos 6 meses</span>
+          <span class="legend"><span><i style="background:var(--in)"></i>Entró</span><span><i style="background:var(--accent)"></i>Salió</span></span>
+        </div>
+        <div class="trend" id="trend"></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel" aria-labelledby="listTitle" data-view="inicio">
+    <div class="listhead">
+      <h2 id="listTitle">Movimientos</h2>
+      <select id="filter" aria-label="Filtrar movimientos"></select>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+
+  <section class="panel" aria-labelledby="tcTitle" id="tcPanel" data-view="tarjetas">
+    <div class="listhead">
+      <h2 id="tcTitle">Tarjetas de crédito</h2>
+      <span class="sub" id="tcUsura"></span>
+    </div>
+    <div class="tcsum" id="tcSum" hidden>
+      <div><span class="label">Debes en total</span><span class="mid" id="tcTotal">—</span><span class="sub" id="tcTotalSub"></span></div>
+      <div><span class="label">Destina este mes</span><span class="mid" id="tcMes">—</span><span class="sub">Suma de las cuotas de tus planes, con cuota de manejo</span></div>
+    </div>
+    <div class="tip" id="tcTip" hidden></div>
+    <div class="tclist" id="tcList"></div>
+    <details class="addtc" id="tcAdd">
+      <summary id="tcAddSummary">+ Agregar una tarjeta</summary>
+      <form id="tcForm" autocomplete="off">
+        <div class="row2">
+          <div class="field">
+            <label for="t-banco">¿De qué banco es?</label>
+            <select id="t-banco"></select>
+          </div>
+          <div class="field">
+            <label for="t-nombre">Nombre para reconocerla (opcional)</label>
+            <input id="t-nombre" placeholder="Ej. Visa Oro, la de compras" maxlength="40">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="t-deuda">¿Cuánto debes hoy?</label>
+            <input id="t-deuda" inputmode="decimal" placeholder="Lo dice tu extracto o la app del banco" required>
+          </div>
+          <div class="field">
+            <label for="t-tasa">Tasa de interés (% efectivo anual)</label>
+            <input id="t-tasa" inputmode="decimal" placeholder="Ej. 27,5" required>
+            <span class="hint" id="t-tasa-hint">Búscala en tu extracto como «Tasa E.A.».</span>
+          </div>
+        </div>
+        <div class="row3">
+          <div class="field">
+            <label for="t-manejo">Cuota de manejo al mes</label>
+            <input id="t-manejo" inputmode="decimal" placeholder="0">
+          </div>
+          <div class="field">
+            <label for="t-cupo">Cupo total (opcional)</label>
+            <input id="t-cupo" inputmode="decimal" placeholder="Ej. 3.000.000">
+          </div>
+          <div class="field">
+            <label for="t-meses">¿En cuántos meses quieres pagarla?</label>
+            <select id="t-meses"></select>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit" id="tcSave">Guardar tarjeta</button>
+          <button class="ghost" type="button" id="tcCancel">Cancelar</button>
+        </div>
+      </form>
+    </details>
+    <span class="hint">Los cálculos son aproximados: usan la tasa que escribes y una cuota fija cada mes. El banco puede cobrar distinto por avances, compras diferidas o seguros. Tu extracto siempre manda.</span>
+  </section>
+
+  <section class="panel" aria-labelledby="cuentaTitle" id="cuentaPanel" data-view="cuenta">
+    <h2 id="cuentaTitle">Tu cuenta y la nube</h2>
+    <div class="cuenta" id="cuentaFuera">
+      <span class="sub">Inicia sesión para guardar tus datos en la nube: los ves en todos tus dispositivos, no los pierdes si cambias de teléfono y puedes agregar gastos con un atajo del iPhone. Lo que ya tienes en este dispositivo se sube a tu cuenta.</span>
+      <div class="actions"><button class="primary" type="button" id="googleBtn">Entrar con Google</button></div>
+      <div class="or">o con tu correo</div>
+      <form id="emailForm" autocomplete="on">
+        <div class="row2">
+          <div class="field"><label for="c-email">Correo</label><input id="c-email" type="email" autocomplete="email" required></div>
+          <div class="field"><label for="c-pass">Contraseña</label><input id="c-pass" type="password" autocomplete="current-password" minlength="6" required></div>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit" id="loginBtn">Entrar</button>
+          <button class="ghost" type="button" id="signupBtn">Crear cuenta</button>
+          <button class="linkbtn" type="button" id="resetBtn">Olvidé mi contraseña</button>
+        </div>
+      </form>
+    </div>
+    <div class="cuenta" id="cuentaDentro" hidden>
+      <span class="sub" id="cuentaInfo"></span>
+      <div class="actions"><button class="ghost sm" type="button" id="logoutBtn">Cerrar sesión</button></div>
+    </div>
+    <span class="hint" id="nubeError" hidden></span>
+  </section>
+
+  <section class="panel" aria-labelledby="atajoTitle" id="atajoPanel" data-view="atajo" hidden>
+    <h2 id="atajoTitle">Atajo del iPhone</h2>
+    <span class="sub">Con un atajo puedes anotar un gasto desde el Centro de control sin abrir Tebille. El atajo usa una clave secreta: no la compartas con nadie.</span>
+    <div class="actions">
+      <button class="primary sm" type="button" id="claveBtn">Crear mi clave del atajo</button>
+      <button class="ghost sm" type="button" id="probarBtn" hidden>Probar el atajo</button>
+    </div>
+    <div id="atajoDatos" hidden>
+      <div class="copybox">
+        <span class="flabel">Código para Jellycuts (lo más fácil): ya trae tu usuario y tu clave · <b id="atajoJellyVer">…</b></span>
+        <code id="atajoJelly">Cargando…</code>
+        <div class="actions"><button class="primary sm" type="button" data-copy="atajoJelly">Copiar código para Jellycuts</button></div>
+      </div>
+      <span class="flabel">Si prefieres armar el atajo a mano en la app Atajos:</span>
+      <div class="copybox">
+        <span class="flabel">1. Dirección (URL) para el paso «Obtener contenido de URL»</span>
+        <code id="atajoUrl"></code>
+        <div class="actions"><button class="ghost sm" type="button" data-copy="atajoUrl">Copiar dirección</button></div>
+      </div>
+      <div class="copybox">
+        <span class="flabel">2. Texto para el paso «Texto». Cambia MONTO, CATEGORIA, DESCRIPCION y FECHA por las variables del atajo</span>
+        <code id="atajoJson"></code>
+        <div class="actions"><button class="ghost sm" type="button" data-copy="atajoJson">Copiar texto</button></div>
+      </div>
+      <span class="hint">Si cambias la clave, el atajo viejo deja de funcionar y tendrás que pegar el texto nuevo.</span>
+    </div>
+  </section>
+
+  <section class="panel" aria-labelledby="iosTitle" id="iosPanel" data-view="iphone">
+    <h2 id="iosTitle">Agrega Tebille a tu pantalla de inicio</h2>
+    <span class="sub">Así la abres con un toque, como cualquier app: a pantalla completa, con su ícono y funcionando incluso sin internet. No ocupa espacio como una app de la App Store.</span>
+    <div class="ios-ok" id="iosYa" hidden>✓ Ya estás usando Tebille desde tu pantalla de inicio. No tienes que hacer nada más.</div>
+    <ol class="ios-pasos">
+      <li>
+        <b>Abre Tebille en Safari</b>
+        <span>Entra a <span class="mono">tebille.pages.dev</span> desde <b>Safari</b>, el navegador de la brújula azul. En iOS 16.4 o más nuevo también sirve Chrome.</span>
+      </li>
+      <li>
+        <b>Toca el botón Compartir</b>
+        <span>Es el cuadrado con una flecha hacia arriba
+          <svg class="ios-ico" viewBox="0 0 24 24" aria-label="ícono de compartir"><path d="M12 3v12M7.5 7.5 12 3l4.5 4.5M6 11H5v10h14V11h-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>.
+          En iPhone está abajo en el centro; en iPad, arriba a la derecha. Si no lo ves, desliza la página un poco hacia arriba para que aparezca la barra.</span>
+      </li>
+      <li>
+        <b>Elige «Agregar a pantalla de inicio»</b>
+        <span>Desliza hacia abajo en el menú que se abre hasta encontrar
+          <span class="ios-chip"><svg class="ios-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Agregar a pantalla de inicio</span>.
+          Si no aparece, toca <b>Editar acciones…</b> al final del menú y actívala.</span>
+      </li>
+      <li>
+        <b>Toca «Agregar»</b>
+        <span>Arriba a la derecha. Puedes dejar el nombre «Tebille» o cambiarlo.</span>
+      </li>
+      <li>
+        <b>Ábrela desde el ícono</b>
+        <span>Busca el ícono verde de Tebille en tu pantalla de inicio. Usa siempre ese ícono: es donde queda tu sesión.</span>
+      </li>
+    </ol>
+    <div class="ios-nota">
+      <b>Importante:</b> el ícono y Safari guardan la información por separado. Si usas Tebille sin iniciar sesión, lo que anotes en Safari no aparece en el ícono. Para tener todo junto, entra a <a href="#cuenta">Cuenta y nube</a> e inicia sesión dentro del ícono.
+    </div>
+    <span class="hint">¿Quieres anotar gastos sin abrir la app? Mira <a href="#atajo">Atajo del iPhone</a> (necesitas iniciar sesión).</span>
+  </section>
+
+  <section class="panel acerca" aria-labelledby="acercaTitle" id="acercaPanel" data-view="acerca">
+    <div class="acerca-head">
+      <img src="icons/icon-192.png" alt="" width="64" height="64">
+      <div>
+        <h2 id="acercaTitle">Tebille</h2>
+        <span class="sub">Tus gastos, ingresos, saldo y tarjetas de crédito en un solo lugar.</span>
+      </div>
+    </div>
+    <div class="acerca-autor">
+      <span class="label">Creador de la app y la página</span>
+      <strong class="autor-nombre">Angel Rangel</strong>
+      <span class="autor-bio">Estudiante de Ingeniería de Software en la UDES (Universidad de Santander), actualmente en tercer semestre.</span>
+      <span class="sub">Hecho en Colombia</span>
+    </div>
+    <div class="contactos">
+      <a class="contacto" href="https://instagram.com/angeldrangelj" target="_blank" rel="noopener">
+        <span class="label">Instagram</span><span class="mono">@angeldrangelj</span>
+      </a>
+      <a class="contacto" href="https://wa.me/573116886587" target="_blank" rel="noopener">
+        <span class="label">WhatsApp</span><span class="mono">+57 311 688 6587</span>
+      </a>
+      <a class="contacto" href="tel:+573116886587">
+        <span class="label">Llamar</span><span class="mono">+57 311 688 6587</span>
+      </a>
+    </div>
+    <span class="hint" id="acercaVersion"></span>
+    <span class="hint">© <span id="acercaAnio">2026</span> Angel Rangel. Todos los derechos reservados.</span>
+  </section>
+
+  <section class="panel" aria-labelledby="setTitle" id="ajustesPanel" data-view="ajustes">
+    <h2 id="setTitle">Ajustes</h2>
+    <div class="settings">
+      <div class="field">
+        <label for="s-saldo">¿Cuánto dinero tienes hoy?</label>
+        <input id="s-saldo" inputmode="decimal" placeholder="Ej. 1.250.000">
+      </div>
+      <div class="field">
+        <label for="s-moneda">Moneda</label>
+        <select id="s-moneda">
+          <option value="COP">Peso colombiano (COP)</option><option value="USD">Dólar (USD)</option>
+          <option value="MXN">Peso mexicano (MXN)</option><option value="ARS">Peso argentino (ARS)</option>
+          <option value="CLP">Peso chileno (CLP)</option><option value="PEN">Sol peruano (PEN)</option>
+          <option value="EUR">Euro (EUR)</option><option value="GTQ">Quetzal (GTQ)</option>
+          <option value="DOP">Peso dominicano (DOP)</option><option value="BOB">Boliviano (BOB)</option>
+          <option value="UYU">Peso uruguayo (UYU)</option><option value="VES">Bolívar (VES)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="s-pres">Presupuesto mensual de gastos</label>
+        <input id="s-pres" inputmode="decimal" placeholder="Sin presupuesto">
+      </div>
+      <div><button class="ghost" id="saveSettings" type="button">Guardar ajustes</button></div>
+    </div>
+    <span class="sub">El saldo es el dinero que tienes: efectivo y cuentas, sin contar el cupo de las tarjetas. Escríbelo una vez; después la app lo actualiza con cada ingreso, gasto y pago. Si algún día no coincide con la realidad, corrígelo aquí.</span>
+    <div class="field">
+      <span class="flabel">Copia de seguridad</span>
+      <div class="backup">
+        <button class="ghost" id="exportBtn" type="button">Exportar mis datos</button>
+        <button class="ghost" id="importBtn" type="button">Importar copia</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <span class="sub">Sin sesión, tus datos viven solo en este dispositivo. Exporta una copia de vez en cuando para no perderlos si cambias de teléfono.</span>
+    </div>
+    <div class="actions"><span class="sub" id="appVersion"></span><button class="ghost sm" id="updateBtn" type="button">Buscar actualización</button></div>
+  </section>
+</div>
+<div class="scrim" id="scrim"></div>
+<nav class="drawer" id="drawer" aria-label="Menú de Tebille">
+  <div class="drawer-head">
+    <strong>Tebille</strong>
+    <button class="iconbtn" id="menuClose" type="button" aria-label="Cerrar menú">✕</button>
+  </div>
+  <a href="#inicio" data-nav="inicio">Inicio<span>Saldo, resumen y movimientos</span></a>
+  <a href="#tarjetas" data-nav="tarjetas">Tarjetas de crédito<span>Deudas, tasas y cuánto pagar</span></a>
+  <a href="#cuenta" data-nav="cuenta">Cuenta y nube<span>Inicia sesión y sincroniza</span></a>
+  <a href="#atajo" data-nav="atajo" id="navAtajo" hidden>Atajo del iPhone<span>Anota desde el Centro de control</span></a>
+  <a href="#ajustes" data-nav="ajustes">Ajustes<span>Saldo, moneda, presupuesto y copias</span></a>
+  <a href="#iphone" data-nav="iphone">Instalar en iPhone<span>Agrégala a tu pantalla de inicio</span></a>
+  <a href="#acerca" data-nav="acerca">Acerca de Tebille<span>Creador y contacto</span></a>
+  <div class="drawer-sep"></div>
+  <a href="descargas/Tebille.apk" id="navApk" class="drawer-apk" download>Descargar app para Android<span>Archivo .apk · se instala como cualquier app</span></a>
+  <span class="sub drawer-ver" id="navVersion"></span>
+  <a href="#acerca" class="drawer-autor">Creado por <b>Angel Rangel</b></a>
+</nav>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module">
+const CATS={
+  gasto:[
+    {id:"comida",n:"Comida",c:"--c1"},{id:"transporte",n:"Transporte",c:"--c2"},{id:"vivienda",n:"Vivienda",c:"--c3"},
+    {id:"servicios",n:"Servicios",c:"--c4"},{id:"salud",n:"Salud",c:"--c5"},{id:"ocio",n:"Ocio",c:"--c6"},
+    {id:"compras",n:"Compras",c:"--c7"},{id:"educacion",n:"Educación",c:"--c8"},{id:"otros",n:"Otros",c:"--c9"}],
+  ingreso:[
+    {id:"salario",n:"Salario",c:"--c1"},{id:"negocio",n:"Negocio",c:"--c2"},{id:"extra",n:"Trabajos extra",c:"--c6"},
+    {id:"regalo",n:"Regalos",c:"--c8"},{id:"reembolso",n:"Reembolsos",c:"--c3"},{id:"otros_ing",n:"Otros ingresos",c:"--c9"}]
+};
+const PAGO_CAT={id:"pago",n:"Pago de tarjeta",c:"--c5"};
+
+// Tasa de usura certificada por la Superfinanciera (consumo y ordinario). Actualizar cada mes.
+const USURA={ea:28.59,vigencia:"octubre de 2026"};
+// Tasa promedio que cobra cada banco en compras con interés con tarjeta de crédito (Superfinanciera).
+// Estos valores son el respaldo (corte 9 oct 2026); al abrir, la app trae los más recientes de /api/tasas.
+let BANCOS=[["AV Villas",25.73],["Bancien",28.18],["Banco Agrario",24.45],["Banco Caja Social",28.41],["Banco de Bogotá",25.32],["Banco de Occidente",27.35],["Banco Falabella",27.73],["Banco GNB Sudameris",26.82],["Banco Popular",26.66],["Banco Serfinanza",28.32],["Banco Unión",28.38],["Banco W",28.51],["Bancolombia",28.27],["Bancoomeva",20.21],["BBVA",27.68],["Coltefinanciera",28.88],["Confiar",27.9],["Coopcentral",20.05],["Davibank (antes Scotiabank Colpatria)",28.09],["Davivienda",25.83],["Financiera Juriscoop",27.74],["Finandina",27.65],["Itaú",29.1],["JFK Cooperativa Financiera",26.52],["Lulo Bank",27.23],["Nu",27.8],["Tuya",26.39]];
+let REF_FECHA="9 de octubre de 2026";
+const OTRO_BANCO="Otro banco";
+const MESES_OPC=[1,2,3,6,9,12,18,24,36,48];
+
+const tipoOf=g=>g.tipo==="ingreso"||g.tipo==="pago"?g.tipo:"gasto"; // los registros viejos no tienen tipo: son gastos
+// el atajo manda el nombre ("Comida"), la app guarda el id ("comida"): aceptamos los dos
+const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
+const catOf=g=>{const t=tipoOf(g);if(t==="pago")return PAGO_CAT;const l=CATS[t],k=norm(g.categoria);return l.find(c=>c.id===g.categoria||norm(c.n)===k)||l[l.length-1]};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+const KEY="misgastos.v1";
+let today=new Date();
+const dateStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hoy=()=>dateStr(today);
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+const AJ_DEF={moneda:"COP",presupuesto:0,saldoBase:0,saldoFijado:false};
+let movs=[], tarjetas=[], ajustes={...AJ_DEF};
+let ym={y:today.getFullYear(),m:today.getMonth()};
+let filtro="", editId=null, tipoSel="gasto", catSel="comida", confirmId=null;
+let tcEditId=null, tcOpen=null /* {id, kind:"pago"|"deuda"} */, tcConfirm=null, tasaAuto=true;
+
+/* ---------- almacenamiento en el dispositivo ---------- */
+function leerLocal(){
+  try{const d=JSON.parse(localStorage.getItem(KEY)||"null");return d&&typeof d==="object"?d:null}catch{return null}
+}
+function load(){
+  const d=leerLocal();
+  movs=Array.isArray(d?.gastos)?d.gastos:[]; tarjetas=Array.isArray(d?.tarjetas)?d.tarjetas:[]; ajustes={...AJ_DEF,...(d?.ajustes||{})};
+}
+function persist(){
+  if(nube()) return true; // con sesión iniciada los datos viven en la nube
+  try{localStorage.setItem(KEY,JSON.stringify({gastos:movs,tarjetas,ajustes}));return true}
+  catch{toast("No se pudo guardar. Revisa el espacio libre del teléfono.");return false}
+}
+
+/* ---------- nube (Firebase) ---------- */
+// Configuración pública de la app web de Firebase (no es secreta; la seguridad está en firestore.rules)
+const FB_CONFIG={apiKey:"AIzaSyDQTeDjABhINqRKIZa4Jra3JCT3YTpIMUk",authDomain:"tebille-app-co-e6f6a.firebaseapp.com",
+  projectId:"tebille-app-co-e6f6a",storageBucket:"tebille-app-co-e6f6a.firebasestorage.app",messagingSenderId:"1054037524461",
+  appId:"1:1054037524461:web:04957dc9e586bfb061b1e4"};
+const FB_BASE="https://www.gstatic.com/firebasejs/10.14.1/";
+let fb=null, user=null, unsubs=[], migrado=false, claveAtajo=null;
+async function cargarFirebase(){
+  if(fb) return fb;
+  const [{initializeApp},A,F]=await Promise.all([import(FB_BASE+"firebase-app.js"),import(FB_BASE+"firebase-auth.js"),import(FB_BASE+"firebase-firestore.js")]);
+  const app=initializeApp(FB_CONFIG);
+  let db;
+  try{db=F.initializeFirestore(app,{localCache:F.persistentLocalCache({tabManager:F.persistentMultipleTabManager()})})}
+  catch{db=F.getFirestore(app)}
+  fb={auth:A.getAuth(app),db,A,F}; return fb;
+}
+const nube=()=>!!(fb&&user);
+const uref=(...p)=>fb.F.doc(fb.db,"users",user.uid,...p);
+const ucol=c=>fb.F.collection(fb.db,"users",user.uid,c);
+const limpio=o=>JSON.parse(JSON.stringify(o)); // Firestore no acepta undefined
+const sinId=({id,...r})=>limpio(r);
+const upsert=(arr,o)=>arr.some(x=>x.id===o.id)?arr.map(x=>x.id===o.id?o:x):[...arr,o];
+function errNube(e){console.warn(e);toast("No se pudo guardar en la nube. Se reintentará cuando haya conexión.")}
+
+// Operaciones de datos: en la nube escriben en Firestore (que avisa de vuelta); sin sesión, en el dispositivo
+function putMov(o){
+  if(nube()){movs=upsert(movs,o);fb.F.setDoc(uref("movs",o.id),sinId(o)).catch(errNube);return true}
+  const before=movs; movs=upsert(movs,o); if(!persist()){movs=before;return false} return true;
+}
+function delMov(id){
+  movs=movs.filter(g=>g.id!==id);
+  if(nube()){fb.F.deleteDoc(uref("movs",id)).catch(errNube);return true} return persist();
+}
+function putTarjeta(t){
+  if(nube()){tarjetas=upsert(tarjetas,t);fb.F.setDoc(uref("tarjetas",t.id),sinId(t)).catch(errNube);return true}
+  const before=tarjetas; tarjetas=upsert(tarjetas,t); if(!persist()){tarjetas=before;return false} return true;
+}
+function delTarjeta(id){
+  tarjetas=tarjetas.filter(t=>t.id!==id);
+  if(nube()){fb.F.deleteDoc(uref("tarjetas",id)).catch(errNube);return true} return persist();
+}
+function putAjustes(){
+  if(nube()){fb.F.setDoc(uref("config","ajustes"),limpio(ajustes)).catch(errNube);return true} return persist();
+}
+async function subirTodo(lista,col){
+  for(let i=0;i<lista.length;i+=400){
+    const b=fb.F.writeBatch(fb.db);
+    lista.slice(i,i+400).forEach(o=>b.set(uref(col,o.id),sinId(o)));
+    await b.commit();
+  }
+}
+
+function pararNube(){unsubs.forEach(u=>u());unsubs=[]}
+function escucharNube(){
+  pararNube(); migrado=false;
+  const F=fb.F, listo={m:false,t:false,a:false,aExiste:false};
+  const errSnap=e=>{console.warn(e);mostrarErrorNube("No se pudieron leer tus datos de la nube. Revisa tu conexión.")};
+  const tras=()=>{render(); if(listo.m&&listo.t&&listo.a) migrarLocal(listo.aExiste)};
+  unsubs.push(F.onSnapshot(ucol("movs"),{includeMetadataChanges:true},s=>{movs=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.m=true;tras()},errSnap));
+  unsubs.push(F.onSnapshot(ucol("tarjetas"),{includeMetadataChanges:true},s=>{tarjetas=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.t=true;tras()},errSnap));
+  unsubs.push(F.onSnapshot(uref("config","ajustes"),{includeMetadataChanges:true},s=>{ajustes={...AJ_DEF,...(s.exists()?s.data():{})};if(!s.metadata.fromCache){listo.a=true;listo.aExiste=s.exists()}tras()},errSnap));
+  unsubs.push(F.onSnapshot(uref("privado","atajo"),s=>{claveAtajo=s.exists()?s.data().clave:null;renderAtajo()},()=>{}));
+}
+// La primera vez que inicias sesión, lo que tenías en el dispositivo se sube a tu cuenta
+async function migrarLocal(ajustesEnNube){
+  if(migrado) return; migrado=true;
+  const d=leerLocal(); if(!d) return;
+  const lm=Array.isArray(d.gastos)?d.gastos:[], lt=Array.isArray(d.tarjetas)?d.tarjetas:[];
+  const ids=new Set(movs.map(g=>g.id)), tids=new Set(tarjetas.map(t=>t.id));
+  const nm=lm.filter(g=>g&&g.id&&!ids.has(g.id)), nt=lt.filter(t=>t&&t.id&&!tids.has(t.id));
+  try{
+    await subirTodo(nm,"movs"); await subirTodo(nt,"tarjetas");
+    if(!ajustesEnNube&&d.ajustes) await fb.F.setDoc(uref("config","ajustes"),limpio({...AJ_DEF,...d.ajustes}));
+    try{localStorage.setItem(KEY+".respaldo",JSON.stringify(d));localStorage.removeItem(KEY)}catch{}
+    if(nm.length||nt.length) toast(`Subí a tu cuenta ${nm.length} movimiento${nm.length===1?"":"s"}${nt.length?` y ${nt.length} tarjeta${nt.length===1?"":"s"}`:""} de este dispositivo`);
+  }catch(e){console.warn(e);migrado=false;mostrarErrorNube("No pude subir los datos de este dispositivo. Lo intento de nuevo la próxima vez que abras la app.")}
+}
+function mostrarErrorNube(msg){const e=$("nubeError");e.textContent=msg;e.hidden=!msg}
+if(navigator.storage?.persist) navigator.storage.persist().catch(()=>{});
+
+const fmtCache={};
+function fmt(v){
+  const cur=ajustes.moneda||"COP";
+  if(!fmtCache[cur]){
+    const opt={style:"currency",currency:cur,maximumFractionDigits:["COP","CLP","ARS"].includes(cur)?0:2};
+    // "always" agrupa también los miles de 4 cifras (2.500); navegadores viejos no lo aceptan
+    try{fmtCache[cur]=new Intl.NumberFormat("es",{...opt,useGrouping:"always"})}
+    catch{try{fmtCache[cur]=new Intl.NumberFormat("es",opt)}catch{fmtCache[cur]={format:n=>n.toFixed(2)}}}
+  }
+  return fmtCache[cur].format(v);
+}
+const signed=v=>(v>0?"+":v<0?"−":"")+fmt(Math.abs(v));
+const pct=v=>v.toLocaleString("es",{minimumFractionDigits:2,maximumFractionDigits:2})+" %";
+function parseMonto(s){
+  s=String(s).trim().replace(/[^\d.,-]/g,"");
+  if(!s) return NaN;
+  const lc=s.lastIndexOf(","), ld=s.lastIndexOf(".");
+  if(lc>-1&&ld>-1){ s = lc>ld ? s.replace(/\./g,"").replace(",",".") : s.replace(/,/g,""); }
+  else if(lc>-1){ s = /^-?\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g,"") : s.replace(",","."); }
+  else if(ld>-1 && /^-?\d{1,3}(\.\d{3})+$/.test(s)){ s=s.replace(/\./g,""); }
+  return parseFloat(s);
+}
+// tasas: "27,5" o "27.5" siempre como decimal
+const parseTasa=s=>parseFloat(String(s).trim().replace("%","").replace(",","."));
+const monthKey=(y,m)=>`${y}-${pad(m+1)}`;
+const monthName=(y,m,opt={month:"long",year:"numeric"})=>new Date(y,m,1).toLocaleDateString("es",opt);
+function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+
+/* ---------- cálculos ---------- */
+const inMonth=(g,y,m)=>(g.fecha||"").startsWith(monthKey(y,m));
+const sum=a=>a.reduce((s,g)=>s+(+g.monto||0),0);
+// efecto de un movimiento en el dinero que tienes: una compra con tarjeta no lo toca, el pago de la tarjeta sí
+const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:(g.tarjeta?0:-m)};
+const hastaHoy=()=>movs.filter(g=>(g.fecha||"")<=hoy());
+const netoHastaHoy=()=>hastaHoy().reduce((s,g)=>s+efectivo(g),0);
+const saldo=()=>(+ajustes.saldoBase||0)+netoHastaHoy();
+
+const tasaMes=ea=>Math.pow(1+(+ea||0)/100,1/12)-1;
+const tcNombre=t=>t?(t.nombre?`${t.banco} · ${t.nombre}`:t.banco):"Tarjeta borrada";
+const tcById=id=>tarjetas.find(t=>t.id===id);
+// deuda = la que escribiste + compras con la tarjeta − pagos, hasta hoy
+function tcMovNeto(id){return hastaHoy().reduce((s,g)=>g.tarjeta!==id?s:s+(tipoOf(g)==="pago"?-1:tipoOf(g)==="gasto"?1:0)*(+g.monto||0),0)}
+const tcDeuda=t=>(+t.deudaBase||0)+tcMovNeto(t.id);
+function tcPlan(t){
+  const P=Math.max(0,tcDeuda(t)), i=tasaMes(t.tasa), n=Math.max(1,+t.meses||12), manejo=+t.manejo||0;
+  if(P<=0) return {P:0,i,n,cuota:0,total:manejo,intereses:0,interesMes:0,manejo};
+  const cuota=i>0?P*i/(1-Math.pow(1+i,-n)):P/n;
+  return {P,i,n,cuota,total:cuota+manejo,intereses:cuota*n-P,interesMes:P*i,manejo};
+}
+
+/* ---------- render ---------- */
+function render(){
+  const {y,m}=ym;
+  const ml=monthName(y,m); $("monthLabel").textContent=ml.charAt(0).toUpperCase()+ml.slice(1);
+  const mes=movs.filter(g=>inMonth(g,y,m));
+  const ing=mes.filter(g=>tipoOf(g)==="ingreso"), gas=mes.filter(g=>tipoOf(g)==="gasto"), pagos=mes.filter(g=>tipoOf(g)==="pago");
+  const tIng=sum(ing), tGas=sum(gas), bal=tIng-tGas;
+
+  // saldo
+  const s=saldo();
+  $("bSaldo").textContent=fmt(s);
+  $("balance").classList.toggle("neg",ajustes.saldoFijado&&s<0);
+  const futuros=movs.filter(g=>(g.fecha||"")>hoy()).length;
+  $("bSub").textContent=!ajustes.saldoFijado
+    ?"Escribe cuánto dinero tienes hoy para empezar con tu saldo real."
+    :(s<0?"Has gastado más de lo que tenías.":"Tu dinero, con los movimientos hasta hoy.")+(futuros?` ${futuros} movimiento${futuros>1?"s":""} con fecha futura aún no cuenta${futuros>1?"n":""}.`:"");
+  $("bAjustar").textContent=ajustes.saldoFijado?"Ajustar saldo":"Escribir mi saldo";
+  const planes=tarjetas.map(tcPlan), reservar=planes.reduce((a,p)=>a+(p.P>0?p.total:0),0);
+  $("bReserve").hidden=!(ajustes.saldoFijado&&reservar>0);
+  if(reservar>0) $("bReserve").innerHTML=`<span>Separa para tarjetas este mes: <b>${fmt(reservar)}</b></span><span>Te queda libre: <b>${fmt(s-reservar)}</b></span>`;
+
+  // mes
+  $("sIng").textContent=fmt(tIng);
+  $("sIngSub").textContent=ing.length?`${ing.length} ingreso${ing.length===1?"":"s"}`:"Sin ingresos este mes";
+  $("sGas").textContent=fmt(tGas);
+  const pres=+ajustes.presupuesto||0, meter=$("sMeter");
+  meter.className="meter"; meter.hidden=!(pres>0);
+  const pagosTxt=pagos.length?` · además pagaste ${fmt(sum(pagos))} a tarjetas`:"";
+  if(pres>0){
+    const p=tGas/pres;
+    meter.firstElementChild.style.width=Math.min(100,p*100)+"%";
+    const cls=p>=1?"bad":p>=.8?"warn":"";
+    if(cls) meter.classList.add(cls);
+    $("sBudget").innerHTML=`<span class="pill ${cls}">${Math.round(p*100)}%</span> de ${fmt(pres)}${esc(pagosTxt)}`;
+  } else $("sBudget").textContent=(gas.length?`${gas.length} gasto${gas.length===1?"":"s"}`:"Sin gastos este mes")+pagosTxt;
+  $("sBal").textContent=signed(bal);
+  $("sBal").className="mid "+(bal>0?"pos":bal<0?"negc":"");
+  $("sBalSub").textContent=!(ing.length||gas.length)?"Sin movimientos este mes"
+    :bal>=0?(tIng>0?`Ahorraste el ${Math.round(bal/tIng*100)}% de lo que entró`:"Sin gastos")
+    :"Salió más de lo que entró";
+
+  // barras de gastos
+  const porCat=CATS.gasto.map(c=>({...c,t:sum(gas.filter(g=>catOf(g).id===c.id))})).filter(c=>c.t>0).sort((a,b)=>b.t-a.t);
+  const max=porCat[0]?.t||1, fc=filtro.startsWith("c:")?filtro.slice(2):"";
+  $("bars").innerHTML=porCat.length?porCat.map(c=>`<button class="bar ${fc&&fc!==c.id?"dim":""}" data-cat="${c.id}" aria-pressed="${fc===c.id}">
+    <span>${c.n}</span><span class="track"><i style="width:${c.t/max*100}%;background:var(${c.c})"></i></span><span class="amt">${fmt(c.t)}</span></button>`).join("")
+    :`<div class="empty">Cuando registres gastos de ${monthName(y,m,{month:"long"})}, aquí verás cuánto va a cada categoría.</div>`;
+
+  // tendencia
+  const meses=[...Array(6)].map((_,i)=>{const d=new Date(y,m-5+i,1);return{y:d.getFullYear(),m:d.getMonth()}});
+  const data=meses.map(k=>{const l=movs.filter(g=>inMonth(g,k.y,k.m));return{i:sum(l.filter(g=>tipoOf(g)==="ingreso")),g:sum(l.filter(g=>tipoOf(g)==="gasto"))}});
+  const tmax=Math.max(...data.map(d=>Math.max(d.i,d.g)),1);
+  $("trend").innerHTML=meses.map((k,i)=>`<div class="${i===5?"cur":""}" title="${monthName(k.y,k.m)}: entró ${fmt(data[i].i)}, salió ${fmt(data[i].g)}">
+    <div class="pair"><b class="i" style="height:${data[i].i/tmax*100}%"></b><b class="g" style="height:${data[i].g/tmax*100}%"></b></div>
+    <small>${monthName(k.y,k.m,{month:"short"}).replace(".","")}</small></div>`).join("");
+
+  // filtro
+  const fsel=$("filter");
+  fsel.innerHTML=`<option value="">Todos los movimientos</option><option value="t:ingreso">Solo ingresos</option><option value="t:gasto">Solo gastos</option><option value="t:pago">Solo pagos a tarjetas</option>`
+    +`<optgroup label="Gastos">${CATS.gasto.map(c=>`<option value="c:${c.id}">${c.n}</option>`).join("")}</optgroup>`
+    +`<optgroup label="Ingresos">${CATS.ingreso.map(c=>`<option value="c:${c.id}">${c.n}</option>`).join("")}</optgroup>`;
+  fsel.value=filtro;
+
+  // lista
+  const pasa=g=>!filtro||(filtro.startsWith("t:")?tipoOf(g)===filtro.slice(2):catOf(g).id===filtro.slice(2));
+  const rows=mes.filter(pasa).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
+  $("list").innerHTML=rows.length?rows.map(g=>{
+    const c=catOf(g), d=new Date(g.fecha+"T12:00"), t=tipoOf(g);
+    const titulo=g.descripcion||(t==="pago"?"Pago a "+tcNombre(tcById(g.tarjeta)):c.n);
+    const metodo=g.tarjeta&&t==="gasto"?"Crédito · "+tcNombre(tcById(g.tarjeta)):(t==="pago"?tcNombre(tcById(g.tarjeta)):g.metodo||"");
+    return `<div class="item ${t}">
+      <div class="day"><strong>${pad(d.getDate())}</strong>${d.toLocaleDateString("es",{weekday:"short"}).replace(".","")}</div>
+      <div class="desc"><div class="t">${esc(titulo)}</div>
+        <div class="m"><span><span class="dot" style="background:var(${c.c})"></span> ${c.n}</span><span>${esc(metodo)}</span></div></div>
+      <div class="amt">${t==="ingreso"?"+":"−"}${fmt(+g.monto||0)}</div>
+      <div class="tiny">${t==="pago"?"":`<button data-edit="${g.id}">Editar</button>`}<button data-del="${g.id}" class="${confirmId===g.id?"confirm":""}">${confirmId===g.id?"¿Borrar?":"Borrar"}</button></div>
+    </div>`}).join("")
+    :`<div class="empty"><strong>${filtro?"Nada con este filtro":"Aún no hay movimientos en "+monthName(y,m,{month:"long"})}</strong><span>Usa el formulario para registrar un gasto o un ingreso.</span></div>`;
+
+  renderTarjetas();
+
+  const ae=document.activeElement;
+  if(ae!==$("s-moneda")) $("s-moneda").value=ajustes.moneda||"COP";
+  if(ae!==$("s-pres")) $("s-pres").value=ajustes.presupuesto||"";
+  if(ae!==$("s-saldo")) $("s-saldo").value=ajustes.saldoFijado?Math.round(s*100)/100:"";
+}
+
+function renderTarjetas(){
+  $("tcUsura").textContent=`Tasa de usura (${USURA.vigencia}): ${pct(USURA.ea)} E.A.`;
+  const lista=tarjetas.map(t=>({t,deuda:tcDeuda(t),plan:tcPlan(t)})).sort((a,b)=>(+b.t.tasa||0)-(+a.t.tasa||0));
+  const total=lista.reduce((a,x)=>a+Math.max(0,x.deuda),0), mesTotal=lista.reduce((a,x)=>a+(x.plan.P>0?x.plan.total:0),0);
+  $("tcSum").hidden=!tarjetas.length;
+  $("tcTotal").textContent=fmt(total);
+  $("tcTotalSub").textContent=`${tarjetas.length} tarjeta${tarjetas.length===1?"":"s"}`;
+  $("tcMes").textContent=fmt(mesTotal);
+  const conDeuda=lista.filter(x=>x.deuda>0);
+  $("tcTip").hidden=conDeuda.length<2;
+  if(conDeuda.length>=2) $("tcTip").textContent=`Si te sobra dinero después de las cuotas, abonarlo a la tarjeta con la tasa más alta (${tcNombre(conDeuda[0].t)}, ${pct(+conDeuda[0].t.tasa)}) es lo que más intereses ahorra.`;
+  $("tcAddSummary").textContent=tarjetas.length?"+ Agregar otra tarjeta":"+ Agregar una tarjeta";
+
+  $("tcList").innerHTML=lista.length?lista.map(({t,deuda,plan})=>{
+    const sobreUsura=(+t.tasa||0)>USURA.ea;
+    const cupo=+t.cupo||0, uso=cupo>0?Math.max(0,deuda)/cupo:0;
+    const open=tcOpen&&tcOpen.id===t.id?tcOpen.kind:null;
+    return `<article class="tc" data-id="${t.id}">
+      <div class="tc-top">
+        <div class="tc-name"><div class="n">${esc(tcNombre(t))}</div><div class="sub">${pct(+t.tasa||0)} E.A. · ${pct(plan.i*100)} al mes</div></div>
+        <span class="pill ${deuda<=0?"":uso>=.9?"bad":uso>=.7?"warn":""}">${deuda<=0?"Al día":cupo>0?`Usas ${Math.round(uso*100)}% del cupo`:"Con deuda"}</span>
+      </div>
+      ${sobreUsura?`<div class="warnbox">Esta tasa supera la de usura de ${USURA.vigencia} (${pct(USURA.ea)}). Revisa el número en tu extracto; ningún banco puede cobrar más que la usura.</div>`:""}
+      <div class="tc-grid">
+        <div><span class="label">Debes</span><span class="mid">${deuda<0?"A favor "+fmt(-deuda):fmt(deuda)}</span></div>
+        <div><span class="label">Interés de este mes</span><span class="mono">≈ ${fmt(plan.interesMes)}</span></div>
+        <div><span class="label">${cupo>0?"Cupo disponible":"Cuota de manejo"}</span><span class="mono">${cupo>0?fmt(Math.max(0,cupo-Math.max(0,deuda))):fmt(+t.manejo||0)}</span></div>
+      </div>
+      ${cupo>0?`<div class="meter ${uso>=.9?"bad":uso>=.7?"warn":""}"><i style="width:${Math.min(100,uso*100)}%"></i></div>`:""}
+      ${plan.P>0?`<div class="tc-plan">
+        <div class="row"><span>Para pagarla en</span>
+          <select data-meses="${t.id}" aria-label="Meses para pagar ${esc(tcNombre(t))}">${MESES_OPC.map(n=>`<option value="${n}" ${n===(+t.meses||12)?"selected":""}>${n} ${n===1?"mes":"meses"}</option>`).join("")}</select>
+          <span>destina cada mes:</span></div>
+        <span class="cuota">${fmt(plan.total)}</span>
+        <span class="sub">${plan.manejo?`Incluye ${fmt(plan.manejo)} de cuota de manejo. `:""}En total pagarías ≈ ${fmt(plan.intereses)} en intereses.</span>
+      </div>`:`<div class="tc-plan"><span>No debes nada en esta tarjeta.${t.manejo?` Igual cuenta con ${fmt(+t.manejo)} de cuota de manejo al mes.`:""}</span></div>`}
+      <div class="actions">
+        <button class="primary sm" data-act="pago">Registrar pago</button>
+        <button class="ghost sm" data-act="deuda">Actualizar deuda</button>
+        <button class="ghost sm" data-act="editar">Editar</button>
+        <button class="ghost sm" data-act="borrar">${tcConfirm===t.id?"¿Borrar tarjeta?":"Borrar"}</button>
+      </div>
+      ${open==="pago"?`<form class="tc-inline two" data-form="pago">
+        <div class="field"><label for="p-monto-${t.id}">¿Cuánto pagaste?</label><input id="p-monto-${t.id}" inputmode="decimal" placeholder="${plan.P>0?Math.round(plan.total):0}" required></div>
+        <div class="field"><label for="p-fecha-${t.id}">Fecha</label><input id="p-fecha-${t.id}" type="date" value="${hoy()}" required></div>
+        <button class="primary sm" type="submit">Guardar pago</button>
+        <span class="hint" style="grid-column:1/-1">El pago baja tu saldo y la deuda de la tarjeta.</span>
+      </form>`:""}
+      ${open==="deuda"?`<form class="tc-inline" data-form="deuda">
+        <div class="field"><label for="d-monto-${t.id}">¿Cuánto debes hoy según tu extracto?</label><input id="d-monto-${t.id}" inputmode="decimal" value="${Math.round(Math.max(0,deuda)*100)/100}" required></div>
+        <button class="primary sm" type="submit">Actualizar</button>
+        <button class="ghost sm" type="button" data-act="cerrar">Cancelar</button>
+        <span class="hint" style="grid-column:1/-1">Úsalo cuando llegue el extracto: así se suman los intereses y cobros que el banco ya aplicó.</span>
+      </form>`:""}
+    </article>`}).join("")
+    :`<div class="empty"><strong>No tienes tarjetas registradas</strong><span>Agrega tu tarjeta: eliges el banco, escribes cuánto debes y la tasa, y te digo cuánto destinar cada mes para pagarla.</span></div>`;
+
+  // selector de tarjeta en el formulario de gastos
+  const fsel=$("f-tarjeta"), cur=fsel.value;
+  fsel.innerHTML=tarjetas.map(t=>`<option value="${t.id}">${esc(tcNombre(t))}</option>`).join("")+`<option value="">Ninguna: no sumarla a una tarjeta</option>`;
+  // conservar la elección solo si era una tarjeta; si no, queda la primera tarjeta
+  if(cur&&[...fsel.options].some(o=>o.value===cur)) fsel.value=cur; else fsel.selectedIndex=0;
+  syncTarjetaField();
+}
+
+function syncTarjetaField(){
+  $("f-tarjeta-wrap").hidden=!(tipoSel==="gasto"&&$("f-metodo").value==="Crédito"&&tarjetas.length);
+}
+function renderForm(){
+  document.querySelectorAll(".seg button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.tipo===tipoSel));
+  $("catPicker").innerHTML=CATS[tipoSel].map(c=>`<button type="button" class="cat" data-pick="${c.id}" aria-pressed="${catSel===c.id}"><span class="dot" style="background:var(${c.c})"></span>${c.n}</button>`).join("");
+  const ing=tipoSel==="ingreso";
+  $("metodoLabel").textContent=ing?"Recibido en":"Pagado con";
+  $("f-desc").placeholder=ing?"Ej. pago de la quincena":"Ej. mercado de la semana";
+  $("saveBtn").textContent=editId?"Guardar cambios":(ing?"Agregar ingreso":"Agregar gasto");
+  syncTarjetaField();
+}
+function setTipo(t){if(tipoSel===t)return;tipoSel=t;catSel=CATS[t][0].id;renderForm()}
+function resetForm(){
+  editId=null; $("form").reset(); $("f-fecha").value=dateStr(new Date()); catSel=CATS[tipoSel][0].id;
+  $("formTitle").textContent="Registrar movimiento"; $("cancelEdit").hidden=true; renderForm();
+}
+
+/* ---------- formulario de tarjetas ---------- */
+// lista de bancos del formulario; conserva la elección y agrega bancos viejos que ya no estén en la lista
+function pintarBancos(){
+  const sel=$("t-banco"), cur=sel.value;
+  sel.innerHTML=`<option value="">Elige tu banco</option>`+BANCOS.map(([b])=>`<option>${esc(b)}</option>`).join("")+`<option>${OTRO_BANCO}</option>`;
+  if(cur) elegirBanco(cur);
+}
+function elegirBanco(nombre){
+  const sel=$("t-banco");
+  if(nombre&&![...sel.options].some(o=>o.value===nombre)) sel.insertAdjacentHTML("beforeend",`<option>${esc(nombre)}</option>`);
+  sel.value=nombre||"";
+}
+// trae las tasas más recientes (se actualizan cada semana en la Superfinanciera); sin internet usa las guardadas
+async function cargarTasas(){
+  const aplicar=d=>{
+    if(!Array.isArray(d?.bancos)||!d.bancos.length) return false;
+    BANCOS=d.bancos.map(b=>[b.nombre,b.tasa]);
+    if(d.corte) REF_FECHA=new Date(d.corte+"T12:00").toLocaleDateString("es",{day:"numeric",month:"long",year:"numeric"});
+    pintarBancos(); if($("t-banco").value) tasaHint();
+    return true;
+  };
+  try{aplicar(JSON.parse(localStorage.getItem("tebille.tasas")||"null"))}catch{}
+  try{
+    const r=await fetch("/api/tasas",{cache:"no-cache"}); if(!r.ok) return;
+    const d=await r.json();
+    if(aplicar(d)) try{localStorage.setItem("tebille.tasas",JSON.stringify(d))}catch{}
+  }catch{}
+}
+pintarBancos();
+$("t-meses").innerHTML=MESES_OPC.map(n=>`<option value="${n}" ${n===12?"selected":""}>${n} ${n===1?"mes":"meses"}</option>`).join("");
+function tasaHint(){
+  const ref=BANCOS.find(([b])=>b===$("t-banco").value)?.[1];
+  const h=$("t-tasa-hint");
+  if(ref){
+    if(tasaAuto||!$("t-tasa").value) {$("t-tasa").value=String(ref).replace(".",",");tasaAuto=true}
+    h.textContent=`Puse ${pct(ref)}: es el promedio que cobró ${$("t-banco").value} en compras con interés con tarjeta de crédito, según la Superfinanciera (datos al ${REF_FECHA}). Tu tasa puede ser distinta: si tu extracto dice otra, cámbiala.`;
+  } else {
+    if(tasaAuto) $("t-tasa").value="";
+    h.textContent=`Búscala en tu extracto o en la app del banco como «Tasa E.A.». El máximo legal en ${USURA.vigencia} es ${pct(USURA.ea)}.`;
+  }
+}
+$("t-banco").onchange=tasaHint;
+$("t-tasa").oninput=()=>{tasaAuto=false};
+function resetTcForm(){
+  tcEditId=null; tasaAuto=true; $("tcForm").reset(); $("t-meses").value="12"; tasaHint();
+  $("tcSave").textContent="Guardar tarjeta";
+}
+$("tcCancel").onclick=()=>{resetTcForm();$("tcAdd").open=false};
+$("tcForm").onsubmit=e=>{
+  e.preventDefault();
+  const banco=$("t-banco").value;
+  if(!banco){toast("Elige el banco de la tarjeta.");$("t-banco").focus();return}
+  const deuda=parseMonto($("t-deuda").value), tasa=parseTasa($("t-tasa").value);
+  if(isNaN(deuda)||deuda<0){toast("Escribe cuánto debes, por ejemplo 1.200.000 (0 si no debes nada).");$("t-deuda").focus();return}
+  if(!(tasa>0&&tasa<200)){toast("Escribe la tasa efectiva anual, por ejemplo 27,5.");$("t-tasa").focus();return}
+  const manejo=parseMonto($("t-manejo").value)||0, cupo=parseMonto($("t-cupo").value)||0;
+  const prev=tcEditId?tcById(tcEditId):null;
+  const t={id:tcEditId||newId("t"),banco,nombre:$("t-nombre").value.trim(),tasa:Math.round(tasa*100)/100,
+    manejo:Math.max(0,manejo),cupo:Math.max(0,cupo),meses:+$("t-meses").value||12,creado:prev?.creado||Date.now()};
+  // la deuda escrita es la de hoy: guardamos la base descontando compras y pagos ya registrados
+  t.deudaBase=Math.round((deuda-tcMovNeto(t.id))*100)/100;
+  if(!putTarjeta(t)) return;
+  toast(prev?"Tarjeta actualizada":"Tarjeta agregada");
+  resetTcForm(); $("tcAdd").open=false; render();
+};
+$("tcList").onchange=e=>{
+  const s=e.target.closest("[data-meses]"); if(!s) return;
+  const t=tcById(s.dataset.meses); if(t){putTarjeta({...t,meses:+s.value}); render()}
+};
+$("tcList").onclick=e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const id=b.closest(".tc").dataset.id, t=tcById(id), act=b.dataset.act;
+  if(act==="pago"||act==="deuda"){
+    tcOpen=tcOpen&&tcOpen.id===id&&tcOpen.kind===act?null:{id,kind:act}; render();
+    if(tcOpen) $((act==="pago"?"p-monto-":"d-monto-")+id)?.focus();
+  }
+  if(act==="cerrar"){tcOpen=null;render()}
+  if(act==="editar"){
+    tcEditId=id; tasaAuto=false;
+    elegirBanco(t.banco); $("t-nombre").value=t.nombre||""; $("t-deuda").value=Math.round(Math.max(0,tcDeuda(t))*100)/100;
+    $("t-tasa").value=String(t.tasa).replace(".",","); $("t-manejo").value=t.manejo||""; $("t-cupo").value=t.cupo||""; $("t-meses").value=String(t.meses||12);
+    tasaHint(); $("tcSave").textContent="Guardar cambios"; $("tcAdd").open=true; $("tcAdd").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  if(act==="borrar"){
+    if(tcConfirm===id){
+      tcConfirm=null; delTarjeta(id); render(); toast("Tarjeta borrada. Sus compras y pagos siguen en Movimientos.");
+    } else {tcConfirm=id;render();setTimeout(()=>{if(tcConfirm===id){tcConfirm=null;render()}},4000)}
+  }
+};
+$("tcList").onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target, id=f.closest(".tc").dataset.id, t=tcById(id);
+  if(f.dataset.form==="pago"){
+    const monto=parseMonto($("p-monto-"+id).value), fecha=$("p-fecha-"+id).value||hoy();
+    if(!(monto>0)){toast("Escribe cuánto pagaste.");return}
+    const obj={id:newId("p"),tipo:"pago",tarjeta:id,monto:Math.round(monto*100)/100,descripcion:"",categoria:"pago",fecha,metodo:"",creado:Date.now()};
+    if(!putMov(obj)) return;
+    tcOpen=null; render(); toast(`Pago de ${fmt(obj.monto)} registrado`);
+  }
+  if(f.dataset.form==="deuda"){
+    const real=parseMonto($("d-monto-"+id).value);
+    if(isNaN(real)||real<0){toast("Escribe cuánto debes, por ejemplo 1.200.000.");return}
+    if(putTarjeta({...t,deudaBase:Math.round((real-tcMovNeto(id))*100)/100})){tcOpen=null;render();toast("Deuda actualizada")}
+  }
+};
+
+/* ---------- eventos ---------- */
+$("prev").onclick=()=>{ym=ym.m===0?{y:ym.y-1,m:11}:{y:ym.y,m:ym.m-1};confirmId=null;render()};
+$("next").onclick=()=>{ym=ym.m===11?{y:ym.y+1,m:0}:{y:ym.y,m:ym.m+1};confirmId=null;render()};
+document.querySelector(".seg").onclick=e=>{const b=e.target.closest("[data-tipo]");if(b)setTipo(b.dataset.tipo)};
+$("catPicker").onclick=e=>{const b=e.target.closest("[data-pick]");if(b){catSel=b.dataset.pick;renderForm()}};
+$("f-metodo").onchange=syncTarjetaField;
+$("bars").onclick=e=>{const b=e.target.closest("[data-cat]");if(b){const v="c:"+b.dataset.cat;filtro=filtro===v?"":v;render()}};
+$("filter").onchange=e=>{filtro=e.target.value;render()};
+$("cancelEdit").onclick=resetForm;
+$("bAjustar").onclick=()=>{location.hash="ajustes";setTimeout(()=>$("s-saldo").focus(),100)};
+$("form").onsubmit=e=>{
+  e.preventDefault();
+  const monto=parseMonto($("f-monto").value);
+  if(!(monto>0)){toast("Escribe un monto mayor que cero.");$("f-monto").focus();return}
+  const fecha=$("f-fecha").value||dateStr(new Date());
+  const prev=editId?movs.find(g=>g.id===editId):null;
+  const obj={id:editId||newId("g"),tipo:tipoSel,
+    monto:Math.round(monto*100)/100,descripcion:$("f-desc").value.trim(),categoria:catSel,fecha,metodo:$("f-metodo").value,creado:prev?.creado||Date.now()};
+  if(!$("f-tarjeta-wrap").hidden&&$("f-tarjeta").value) obj.tarjeta=$("f-tarjeta").value;
+  if(!putMov(obj)) return;
+  toast(editId?"Movimiento actualizado":obj.tarjeta?`Gasto sumado a ${tcNombre(tcById(obj.tarjeta))}`:(tipoSel==="ingreso"?"Ingreso agregado":"Gasto agregado"));
+  const [fy,fm]=fecha.split("-").map(Number); ym={y:fy,m:fm-1};
+  resetForm(); render();
+};
+$("list").onclick=e=>{
+  const ed=e.target.closest("[data-edit]"), dl=e.target.closest("[data-del]");
+  if(ed){
+    const g=movs.find(x=>x.id===ed.dataset.edit); if(!g) return;
+    editId=g.id; tipoSel=tipoOf(g); catSel=catOf(g).id;
+    $("f-monto").value=g.monto; $("f-desc").value=g.descripcion||""; $("f-fecha").value=g.fecha; $("f-metodo").value=g.metodo||"Efectivo";
+    $("formTitle").textContent=tipoSel==="ingreso"?"Editar ingreso":"Editar gasto"; $("cancelEdit").hidden=false; renderForm();
+    $("f-tarjeta").value=g.tarjeta&&tcById(g.tarjeta)?g.tarjeta:"";
+    $("form").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  if(dl){
+    const id=dl.dataset.del;
+    if(confirmId===id){confirmId=null;delMov(id);render();toast("Movimiento borrado")}
+    else{confirmId=id;render();setTimeout(()=>{if(confirmId===id){confirmId=null;render()}},4000)}
+  }
+};
+$("saveSettings").onclick=()=>{
+  const p=parseMonto($("s-pres").value);
+  const next={...ajustes,moneda:$("s-moneda").value,presupuesto:p>0?Math.round(p*100)/100:0};
+  const raw=$("s-saldo").value.trim();
+  if(raw){
+    const real=parseMonto(raw);
+    if(isNaN(real)){toast("Escribe tu saldo como un número, por ejemplo 1.250.000.");$("s-saldo").focus();return}
+    // guardamos la base para que saldo = base + movimientos dé exactamente lo que escribiste
+    next.saldoBase=Math.round((real-netoHastaHoy())*100)/100; next.saldoFijado=true;
+  }
+  ajustes=next;
+  if(putAjustes()){render();toast("Ajustes guardados")}
+};
+
+/* ---------- copia de seguridad ---------- */
+$("exportBtn").onclick=async()=>{
+  // la clave del atajo no viaja en las copias
+  const json=JSON.stringify({app:"tebille",version:3,exportado:new Date().toISOString(),gastos:movs.map(({clave,...g})=>g),tarjetas,ajustes},null,2);
+  const name=`tebille-${dateStr(new Date())}.json`;
+  const file=new File([json],name,{type:"application/json"});
+  try{
+    if(navigator.canShare?.({files:[file]})){await navigator.share({files:[file],title:"Copia de Tebille"});return}
+  }catch(e){if(e?.name==="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(file);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  toast("Copia descargada");
+};
+$("importBtn").onclick=()=>$("importFile").click();
+$("importFile").onchange=async e=>{
+  const f=e.target.files?.[0]; e.target.value=""; if(!f) return;
+  try{
+    const d=JSON.parse(await f.text());
+    if(!Array.isArray(d.gastos)) throw 0;
+    const ids=new Set(movs.map(g=>g.id)), tids=new Set(tarjetas.map(t=>t.id));
+    const nuevos=d.gastos.filter(g=>g&&g.id&&g.fecha&&+g.monto>0&&!ids.has(g.id));
+    const nuevasT=(Array.isArray(d.tarjetas)?d.tarjetas:[]).filter(t=>t&&t.id&&t.banco&&!tids.has(t.id));
+    // en un dispositivo sin datos, la copia también trae moneda, presupuesto y saldo
+    const vacio=!movs.length;
+    if(d.ajustes&&vacio) ajustes={...ajustes,...d.ajustes};
+    if(nube()){
+      await subirTodo(nuevos,"movs"); await subirTodo(nuevasT,"tarjetas"); if(d.ajustes&&vacio) putAjustes();
+    } else { movs=[...movs,...nuevos]; tarjetas=[...tarjetas,...nuevasT]; if(!persist()) return; }
+    {render();toast(`Se importaron ${nuevos.length} movimiento${nuevos.length===1?"":"s"}${nuevasT.length?` y ${nuevasT.length} tarjeta${nuevasT.length===1?"":"s"}`:""}`)}
+  }catch{toast("Ese archivo no es una copia de Tebille.")}
+};
+
+/* ---------- instalación ---------- */
+const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+const dismissed=(()=>{try{return localStorage.getItem("misgastos.noinstall")==="1"}catch{return false}})();
+let deferred=null;
+function showInstall(text,canPrompt,link){
+  if(standalone||dismissed) return;
+  $("installText").textContent=text; $("installBtn").hidden=!canPrompt; $("installBanner").hidden=false;
+  $("installHow").hidden=!link; if(link) $("installHow").href=link;
+}
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;showInstall("Instala Tebille en tu teléfono para abrirla como una app, incluso sin internet.",true)});
+$("installBtn").onclick=async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice.catch(()=>{});deferred=null;$("installBanner").hidden=true};
+$("installClose").onclick=()=>{$("installBanner").hidden=true;try{localStorage.setItem("misgastos.noinstall","1")}catch{}};
+addEventListener("appinstalled",()=>{$("installBanner").hidden=true;toast("Tebille quedó instalada")});
+if(/iphone|ipad|ipod/i.test(navigator.userAgent)&&!standalone) showInstall("Instálala en tu pantalla de inicio: toca «Cómo instalar» para ver los pasos.",false,"#iphone");
+if(standalone) $("iosYa").hidden=false;
+
+// si la app queda abierta de un día para otro, actualizar "hoy"
+document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=new Date();if(dateStr(n)!==dateStr(today)){today=n;if(!editId)$("f-fecha").value=dateStr(n);render()}}});
+
+/* ---------- actualizaciones ---------- */
+// Sube este número junto con VERSION en sw.js cada vez que publiques
+const APP_VERSION=27;
+$("appVersion").textContent=`Versión ${APP_VERSION}`;
+let swReg=null;
+if("serviceWorker" in navigator){
+  addEventListener("load",async()=>{
+    try{swReg=await navigator.serviceWorker.register("sw.js",{updateViaCache:"none"});swReg.update()}catch{}
+  });
+  // cuando llega una versión nueva, recargar una sola vez para usarla
+  let recargando=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(recargando)return;recargando=true;location.reload()});
+  // el iPhone deja la app abierta en segundo plano: buscar novedades cada vez que vuelve a primer plano
+  document.addEventListener("visibilitychange",()=>{if(!document.hidden){swReg?.update().catch(()=>{});plantillaJelly=null;if(user&&claveAtajo)renderJelly()}});
+}
+$("updateBtn").onclick=async()=>{
+  toast("Buscando actualización…");
+  try{
+    const r=await fetch("sw.js",{cache:"no-store"}); const t=await r.text();
+    const remota=(t.match(/mis-gastos-v(\d+)/)||[])[1];
+    if(remota&&+remota>APP_VERSION){await swReg?.update();setTimeout(()=>location.reload(),800)}
+    else toast("Ya tienes la versión más reciente");
+  }catch{toast("Sin conexión: no se pudo buscar.")}
+};
+
+/* ---------- cuenta ---------- */
+const ERR_AUTH={
+  "auth/invalid-credential":"Correo o contraseña incorrectos.","auth/wrong-password":"Correo o contraseña incorrectos.",
+  "auth/user-not-found":"No hay una cuenta con ese correo. Toca «Crear cuenta».",
+  "auth/email-already-in-use":"Ya existe una cuenta con ese correo. Toca «Entrar».",
+  "auth/weak-password":"La contraseña debe tener al menos 6 caracteres.","auth/invalid-email":"Ese correo no es válido.",
+  "auth/network-request-failed":"No hay conexión a internet.","auth/too-many-requests":"Demasiados intentos. Espera unos minutos.",
+  "auth/operation-not-allowed":"Ese método de inicio de sesión no está activado en Firebase.",
+  "auth/unauthorized-domain":"Este sitio no está autorizado en Firebase (Authentication → Dominios autorizados)."};
+function errAuth(e){
+  if(["auth/popup-closed-by-user","auth/cancelled-popup-request"].includes(e?.code)) return;
+  console.warn(e); mostrarErrorNube(ERR_AUTH[e?.code]||"No se pudo iniciar sesión. Si estás en la app instalada del iPhone y Google falla, entra con tu correo.");
+}
+async function conFb(fn){
+  mostrarErrorNube("");
+  let f; try{f=await cargarFirebase()}catch{mostrarErrorNube("No se pudo conectar con la nube. Revisa tu conexión.");return}
+  try{await fn(f)}catch(e){errAuth(e)}
+}
+$("googleBtn").onclick=()=>conFb(async({auth,A})=>{
+  const p=new A.GoogleAuthProvider();
+  try{await A.signInWithPopup(auth,p)}
+  catch(e){if(["auth/popup-blocked","auth/operation-not-supported-in-this-environment"].includes(e.code)) await A.signInWithRedirect(auth,p); else throw e}
+});
+const cred=()=>[$("c-email").value.trim(),$("c-pass").value];
+$("emailForm").onsubmit=e=>{e.preventDefault();conFb(({auth,A})=>A.signInWithEmailAndPassword(auth,...cred()))};
+$("signupBtn").onclick=()=>{if(!$("emailForm").reportValidity())return;conFb(({auth,A})=>A.createUserWithEmailAndPassword(auth,...cred()))};
+$("resetBtn").onclick=()=>{
+  const em=$("c-email").value.trim(); if(!em){toast("Escribe tu correo primero.");$("c-email").focus();return}
+  conFb(async({auth,A})=>{await A.sendPasswordResetEmail(auth,em);toast("Te envié un correo para cambiar la contraseña.")});
+};
+$("logoutBtn").onclick=()=>conFb(({auth,A})=>A.signOut(auth));
+$("statusBtn").onclick=()=>{location.hash="cuenta"};
+
+function renderCuenta(){
+  const dentro=!!user;
+  $("cuentaFuera").hidden=dentro; $("cuentaDentro").hidden=!dentro; $("atajoPanel").hidden=!dentro; $("navAtajo").hidden=!dentro;
+  if(!dentro&&vistaActual==="atajo") location.hash="cuenta";
+  $("status").textContent=dentro?"Sincronizado en la nube":"Guardado en este dispositivo";
+  $("statusBtn").textContent=dentro?"Mi cuenta":"Activar la nube";
+  if(dentro) $("cuentaInfo").textContent=`Entraste como ${user.email||"usuario"}. Tus datos se guardan en tu cuenta y los ves en cualquier dispositivo donde inicies sesión.`;
+  renderAtajo();
+}
+
+/* ---------- atajo del iPhone ---------- */
+// El atajo crea el movimiento directo en Firestore, sin sesión; las reglas exigen la clave secreta
+const atajoUrl=uid=>`https://firestore.googleapis.com/v1/projects/${FB_CONFIG.projectId}/databases/(default)/documents/users/${uid}/movs?key=${FB_CONFIG.apiKey}`;
+const atajoJson=clave=>JSON.stringify({fields:{tipo:{stringValue:"gasto"},monto:{doubleValue:"MONTO"},categoria:{stringValue:"CATEGORIA"},
+  descripcion:{stringValue:"DESCRIPCION"},fecha:{stringValue:"FECHA"},metodo:{stringValue:"Atajo"},origen:{stringValue:"atajo"},clave:{stringValue:clave}}})
+  .replace('"MONTO"',"MONTO"); // el monto va sin comillas: es un número
+let claveConfirm=false;
+function renderAtajo(){
+  if(!user) return;
+  const tiene=!!claveAtajo;
+  if(!claveConfirm) $("claveBtn").textContent=tiene?"Cambiar la clave":"Crear mi clave del atajo";
+  $("probarBtn").hidden=!tiene; $("atajoDatos").hidden=!tiene;
+  if(tiene){$("atajoUrl").textContent=atajoUrl(user.uid);$("atajoJson").textContent=atajoJson(claveAtajo);renderJelly()}
+}
+// Plantilla del atajo en lenguaje Jelly (atajo-tebille.jelly) con el usuario y la clave ya puestos
+let plantillaJelly=null;
+async function renderJelly(){
+  try{
+    // siempre se descarga de nuevo (sin caché) para no entregar un atajo viejo
+    const r=await fetch("atajo-tebille.jelly?v="+Date.now(),{cache:"no-store"}); if(!r.ok) throw 0;
+    plantillaJelly=await r.text();
+    $("atajoJellyVer").textContent="versión del atajo "+((plantillaJelly.match(/Versión del atajo: (\d+)/)||[])[1]||"?");
+    if(!user||!claveAtajo) return;
+    $("atajoJelly").textContent=plantillaJelly
+      .replace(/^\/\/ Lo más fácil.*\n\/\/ Si usas este archivo.*\n/m,"// Generado por Tebille con tu usuario y tu clave.\n")
+      .replace(/PEGA_AQUI_TU_USUARIO/g,user.uid).replace(/PEGA_AQUI_TU_CLAVE/g,claveAtajo);
+  }catch{$("atajoJelly").textContent="No se pudo cargar el código. Revisa tu conexión y vuelve a abrir esta sección."}
+}
+$("claveBtn").onclick=async()=>{
+  if(!nube()) return;
+  if(claveAtajo&&!claveConfirm){
+    claveConfirm=true; $("claveBtn").textContent="¿Seguro? El atajo actual dejará de funcionar";
+    setTimeout(()=>{claveConfirm=false;renderAtajo()},4000); return;
+  }
+  claveConfirm=false;
+  const abc="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", b=new Uint8Array(28); crypto.getRandomValues(b);
+  const clave=Array.from(b,x=>abc[x%abc.length]).join("");
+  try{await fb.F.setDoc(uref("privado","atajo"),{clave});toast(claveAtajo?"Clave cambiada":"Clave creada")}catch(e){errNube(e)}
+};
+$("probarBtn").onclick=async()=>{
+  // hace exactamente lo que hará el atajo de Jellycuts: abrir /api/gasto con el usuario y la clave
+  const q=new URLSearchParams({u:user.uid,k:claveAtajo,monto:"1",cat:"Otros",desc:"Prueba del atajo (puedes borrarla)"});
+  try{
+    const r=await fetch("/api/gasto?"+q,{cache:"no-store"}); const msg=await r.text();
+    toast(r.ok?"Funciona: se agregó un gasto de prueba de 1. Bórralo en Movimientos.":msg);
+  }catch{toast("Sin conexión: no se pudo probar.")}
+};
+document.addEventListener("click",async e=>{
+  const b=e.target.closest("[data-copy]"); if(!b) return;
+  const el=$(b.dataset.copy);
+  try{await navigator.clipboard.writeText(el.textContent);toast("Copiado")}
+  catch{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Texto seleccionado: cópialo")}
+});
+
+/* ---------- menú de 3 rayas y vistas ---------- */
+// Cada sección tiene data-view; el menú cambia la vista con #inicio, #tarjetas, etc. (el botón atrás de Android funciona)
+const VISTAS={inicio:"",tarjetas:"Tarjetas de crédito",cuenta:"Cuenta y nube",atajo:"Atajo del iPhone",ajustes:"Ajustes",iphone:"Instalar en iPhone",acerca:"Acerca de Tebille"};
+let vistaActual="inicio";
+function mostrarVista(){
+  let v=location.hash.slice(1); if(!(v in VISTAS)) v="inicio";
+  if(v==="atajo"&&!user) v="cuenta";
+  vistaActual=v;
+  document.querySelectorAll("[data-view]").forEach(el=>el.classList.toggle("fuera",el.dataset.view!==v));
+  document.querySelectorAll("[data-nav]").forEach(a=>{if(a.dataset.nav===v)a.setAttribute("aria-current","page");else a.removeAttribute("aria-current")});
+  $("vistaTitulo").textContent=VISTAS[v]; $("vistaTitulo").hidden=!VISTAS[v];
+  cerrarMenu(false); scrollTo(0,0);
+}
+function abrirMenu(){$("drawer").classList.add("abierto");$("scrim").classList.add("abierto");$("menuBtn").setAttribute("aria-expanded","true");$("drawer").querySelector("[aria-current]")?.focus()}
+function cerrarMenu(devolverFoco=true){
+  if(!$("drawer").classList.contains("abierto")) return;
+  $("drawer").classList.remove("abierto");$("scrim").classList.remove("abierto");$("menuBtn").setAttribute("aria-expanded","false");
+  if(devolverFoco) $("menuBtn").focus();
+}
+$("menuBtn").onclick=abrirMenu; $("menuClose").onclick=()=>cerrarMenu(); $("scrim").onclick=()=>cerrarMenu();
+$("drawer").addEventListener("click",e=>{const a=e.target.closest("[data-nav]");if(a&&location.hash==="#"+a.dataset.nav)cerrarMenu()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")cerrarMenu()});
+addEventListener("hashchange",mostrarVista);
+$("navVersion").textContent=`Tebille · versión ${APP_VERSION}`;
+$("acercaVersion").textContent=`Versión ${APP_VERSION}`; $("acercaAnio").textContent=Math.max(2026,new Date().getFullYear());
+// dentro de la propia app de Android no tiene sentido ofrecer descargarla
+(()=>{let enApk=false;try{enApk=document.referrer.startsWith("android-app://com.tebille.app")||sessionStorage.getItem("tebille.apk")==="1";if(enApk)sessionStorage.setItem("tebille.apk","1")}catch{}
+  if(enApk) $("navApk").hidden=true;})();
+mostrarVista();
+
+/* ---------- inicio ---------- */
+load(); resetForm(); resetTcForm(); render(); renderCuenta(); cargarTasas();
+
+// Accesos directos del ícono en Android ("Anotar gasto" / "Anotar ingreso"): abren el formulario listo
+(()=>{
+  // si justo hay una versión nueva, la app se recarga sola: guardamos el pedido para no perderlo en esa recarga
+  const K="tebille.nuevo"; let nuevo=new URLSearchParams(location.search).get("nuevo");
+  try{ if(nuevo) sessionStorage.setItem(K,nuevo); else nuevo=sessionStorage.getItem(K) }catch{}
+  if(nuevo!=="gasto"&&nuevo!=="ingreso") return;
+  history.replaceState(null,"",location.pathname); // que recargar a mano no vuelva a disparar el acceso
+  setTimeout(()=>{try{sessionStorage.removeItem(K)}catch{}},5000);
+  if(editId) resetForm();
+  setTipo(nuevo);
+  requestAnimationFrame(()=>{
+    $("form").scrollIntoView({block:"start"});
+    $("f-monto").focus();
+  });
+})();
+cargarFirebase().then(({auth,A})=>{
+  A.getRedirectResult(auth).catch(errAuth);
+  A.onAuthStateChanged(auth,u=>{
+    user=u;
+    if(u) escucharNube(); else {pararNube();claveAtajo=null;load()}
+    renderCuenta(); render();
+  });
+}).catch(()=>{$("status").textContent="Guardado en este dispositivo (sin conexión a la nube)"});
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.tebille.app",
+        "sha256_cert_fingerprints": ["5C:FB:0B:BB:7B:07:43:0B:AC:EA:C2:96:3C:53:98:C4:6A:B3:D8:10:86:D2:8F:16:F3:D3:40:4D:F1:AD:83:AE"]
+      }
+    }]

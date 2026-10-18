@@ -1,0 +1,15 @@
+# Encabezados para Cloudflare Pages
+
+# Verificación de la app Android (Trusted Web Activity)
+/.well-known/assetlinks.json
+  Content-Type: application/json
+  Access-Control-Allow-Origin: *
+
+# APK de Android para descargar directo en el teléfono
+/descargas/*
+  Content-Type: application/vnd.android.package-archive
+  Content-Disposition: attachment; filename=Tebille.apk
+
+# El service worker siempre fresco, para que las actualizaciones lleguen
+/sw.js
+  Cache-Control: no-cache
