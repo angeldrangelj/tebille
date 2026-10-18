@@ -1,0 +1,60 @@
+{
+  "packageId": "com.tebille.app",
+  "host": "tebille.pages.dev",
+  "name": "Tebille",
+  "launcherName": "Tebille",
+  "display": "standalone",
+  "themeColor": "#1F6F5C",
+  "themeColorDark": "#000000",
+  "navigationColor": "#000000",
+  "navigationColorDark": "#000000",
+  "navigationDividerColor": "#000000",
+  "navigationDividerColorDark": "#000000",
+  "backgroundColor": "#F3F6F5",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://tebille.pages.dev/icons/icon-512.png",
+  "maskableIconUrl": "https://tebille.pages.dev/icons/icon-maskable-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "signingKey": {
+    "path": "C:\\Users\\USUARIO\\tebille-twa\\android.keystore",
+    "alias": "android"
+  },
+  "appVersionName": "3",
+  "appVersionCode": 3,
+  "shortcuts": [
+    {
+      "name": "Anotar gasto",
+      "shortName": "Gasto",
+      "url": "https://tebille.pages.dev/?nuevo=gasto",
+      "chosenIconUrl": "https://tebille.pages.dev/icons/atajo-gasto.png"
+    },
+    {
+      "name": "Anotar ingreso",
+      "shortName": "Ingreso",
+      "url": "https://tebille.pages.dev/?nuevo=ingreso",
+      "chosenIconUrl": "https://tebille.pages.dev/icons/atajo-ingreso.png"
+    }
+  ],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://tebille.pages.dev/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": true,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUrl": "https://tebille.pages.dev/",
+  "minSdkVersion": 24,
+  "orientation": "portrait",
+  "fingerprints": [],
+  "additionalTrustedOrigins": [],
+  "retainedBundles": [],
+  "protocolHandlers": [],
+  "fileHandlers": [],
+  "launchHandlerClientMode": "",
+  "displayOverride": [],
+  "appVersion": "3"
+}
