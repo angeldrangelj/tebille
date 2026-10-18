@@ -1,8 +1,8 @@
 [{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "com.tebille.app",
-        "sha256_cert_fingerprints": ["5C:FB:0B:BB:7B:07:43:0B:AC:EA:C2:96:3C:53:98:C4:6A:B3:D8:10:86:D2:8F:16:F3:D3:40:4D:F1:AD:83:AE"]
-      }
-    }]
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.tebille.app",
+    "sha256_cert_fingerprints": ["94:21:55:CB:F1:79:F0:0D:5F:98:F9:F7:F2:00:17:03:9D:C9:03:C6:E3:8E:1A:75:0F:CA:03:E4:B3:65:7E:36"]
+  }
+}]
