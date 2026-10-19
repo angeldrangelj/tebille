@@ -1,6 +1,6 @@
 // Tebille — service worker: guarda la app para que abra sin internet.
 // Al cambiar cualquier archivo de la app, sube VERSION para que los teléfonos descarguen la nueva.
-const VERSION = "mis-gastos-v27";
+const VERSION = "mis-gastos-v28";
 const APP = [
   "./",
   "index.html",

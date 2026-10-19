@@ -14,25 +14,48 @@
 <meta name="apple-mobile-web-app-title" content="Tebille">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<script>
+// Aplica el tema guardado antes de pintar la página, para que no parpadee con los colores por defecto
+try{const a=JSON.parse(localStorage.getItem("tebille.apariencia")||"{}");
+  if(a.tema&&a.tema!=="pino")document.documentElement.dataset.tema=a.tema;
+  if(a.modo==="claro"||a.modo==="oscuro")document.documentElement.dataset.modo=a.modo;}catch(e){}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: libro de cuentas personal — saldo arriba, luego el mes (entra / sale / queda), formulario + desglose, movimientos, tarjetas */
+/* Temas: cada tema define su color principal para claro (-l) y oscuro (-d). El modo lo elige la persona
+   (data-modo="claro" | "oscuro") o, si no elige, sigue al sistema. */
 :root{
+  --acc-l:#1F6F5C; --acc-soft-l:#E2F0EB; --in-l:#5BAE8E;
+  --acc-d:#5FC0A3; --acc-soft-d:#1D3530; --in-d:#3E8C72;
   --bg:#F3F6F5; --surface:#FFFFFF; --fg:#14201C; --muted:#5B6B65; --line:#DCE4E1;
-  --accent:#1F6F5C; --accent-soft:#E2F0EB; --warn:#B7791F; --bad:#B4413A; --good:#2F7D4F; --in:#5BAE8E;
+  --warn:#B7791F; --bad:#B4413A; --good:#2F7D4F;
+  --accent:var(--acc-l); --accent-soft:var(--acc-soft-l); --in:var(--in-l);
   --display:"Familjen Grotesk",system-ui,sans-serif;
   --body:"Instrument Sans",system-ui,sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
-  --c1:#1F6F5C; --c2:#3B6FB6; --c3:#B7791F; --c4:#8A4FA8; --c5:#C2524A; --c6:#2E8A8A; --c7:#6B7D2A; --c8:#A65E8C; --c9:#6E7A76;
+  --c1:var(--acc-l); --c2:#3B6FB6; --c3:#B7791F; --c4:#8A4FA8; --c5:#C2524A; --c6:#2E8A8A; --c7:#6B7D2A; --c8:#A65E8C; --c9:#6E7A76;
   color-scheme:light;
 }
-@media (prefers-color-scheme:dark){:root{
+:root[data-tema="oceano"]{--acc-l:#2563A8;--acc-soft-l:#E3ECF8;--in-l:#6A9BD6;--acc-d:#7AA8E8;--acc-soft-d:#1B2A40;--in-d:#3F6EA8}
+:root[data-tema="uva"]{--acc-l:#6D4BB0;--acc-soft-l:#EDE7F8;--in-l:#9C82D6;--acc-d:#B49AF0;--acc-soft-d:#2A2140;--in-d:#7458B8}
+:root[data-tema="coral"]{--acc-l:#C2456A;--acc-soft-l:#FBE6EC;--in-l:#E0849F;--acc-d:#F08AA8;--acc-soft-d:#3D1F29;--in-d:#B4536F}
+:root[data-tema="mandarina"]{--acc-l:#B9541A;--acc-soft-l:#FBEADF;--in-l:#E09566;--acc-d:#F0A060;--acc-soft-d:#3A2617;--in-d:#B8703A}
+:root[data-tema="grafito"]{--acc-l:#3F4A5A;--acc-soft-l:#E6E9EE;--in-l:#7D8899;--acc-d:#B6C2D4;--acc-soft-d:#262C35;--in-d:#6D7888}
+@media (prefers-color-scheme:dark){:root:not([data-modo="claro"]){
   --bg:#0F1614; --surface:#17211E; --fg:#E4ECE9; --muted:#93A39D; --line:#2A3833;
-  --accent:#5FC0A3; --accent-soft:#1D3530; --warn:#E0A84A; --bad:#E07B73; --good:#6CC28E; --in:#3E8C72;
-  --c1:#5FC0A3; --c2:#7AA6E6; --c3:#E0A84A; --c4:#C08ADB; --c5:#E07B73; --c6:#62C4C4; --c7:#A9BE5A; --c8:#D894C0; --c9:#9AA7A3;
+  --warn:#E0A84A; --bad:#E07B73; --good:#6CC28E;
+  --accent:var(--acc-d); --accent-soft:var(--acc-soft-d); --in:var(--in-d);
+  --c1:var(--acc-d); --c2:#7AA6E6; --c3:#E0A84A; --c4:#C08ADB; --c5:#E07B73; --c6:#62C4C4; --c7:#A9BE5A; --c8:#D894C0; --c9:#9AA7A3;
   color-scheme:dark}}
+:root[data-modo="oscuro"]{
+  --bg:#0F1614; --surface:#17211E; --fg:#E4ECE9; --muted:#93A39D; --line:#2A3833;
+  --warn:#E0A84A; --bad:#E07B73; --good:#6CC28E;
+  --accent:var(--acc-d); --accent-soft:var(--acc-soft-d); --in:var(--in-d);
+  --c1:var(--acc-d); --c2:#7AA6E6; --c3:#E0A84A; --c4:#C08ADB; --c5:#E07B73; --c6:#62C4C4; --c7:#A9BE5A; --c8:#D894C0; --c9:#9AA7A3;
+  color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html{-webkit-text-size-adjust:100%}
@@ -131,7 +154,21 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .desc .m{font-size:.8rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .item .amt{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:500;white-space:nowrap}
 .item.ingreso .amt{color:var(--good)}
-.item.pago .amt{color:var(--muted)}
+.item.pago .amt,.item.ahorro .amt{color:var(--muted)}
+/* apariencia */
+.temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.tema{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 10px;font-size:.88rem;text-align:left}
+.tema i{width:22px;height:22px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 2px color-mix(in srgb,#fff 35%,transparent)}
+.tema[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.seg.seg3{grid-template-columns:repeat(3,1fr)}
+.seg button[data-modo][aria-checked="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px color-mix(in srgb,var(--fg) 15%,transparent)}
+/* bolsillos */
+.bol-emoji{font-size:1.6rem;line-height:1;width:44px;height:44px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;flex:none}
+.bol-head{display:flex;gap:12px;align-items:center;min-width:0}
+.bol-head .n{font-weight:600;overflow-wrap:anywhere}
+.bol-saldo{font-family:var(--mono);font-size:1.5rem;font-weight:500}
+.cat.emoji{font-size:1.15rem;padding:4px 10px}
+.balance .ahorro-linea{font-size:.9rem;opacity:.9}
 .tiny{display:flex;gap:2px}
 .tiny button{background:none;border:0;color:var(--muted);padding:6px 8px;border-radius:6px;font-size:.8rem}
 .tiny button:hover{color:var(--fg);background:var(--accent-soft)}
@@ -253,6 +290,7 @@ details.addtc form{padding:16px}
     <span class="label">Saldo actual</span>
     <span class="big" id="bSaldo">—</span>
     <span class="sub" id="bSub"></span>
+    <span class="ahorro-linea" id="bAhorro" hidden></span>
     <div class="reserve" id="bReserve" hidden></div>
     <button type="button" id="bAjustar">Ajustar saldo</button>
   </section>
@@ -517,8 +555,67 @@ details.addtc form{padding:16px}
     <span class="hint">© <span id="acercaAnio">2026</span> Angel Rangel. Todos los derechos reservados.</span>
   </section>
 
+  <section class="panel" aria-labelledby="ahTitle" id="ahPanel" data-view="ahorros">
+    <div class="listhead">
+      <h2 id="ahTitle">Bolsillos de ahorro</h2>
+      <span class="sub">Separa dinero para tus metas</span>
+    </div>
+    <div class="tcsum">
+      <div><span class="label">Tienes ahorrado</span><span class="mid" id="ahTotal">—</span><span class="sub" id="ahCount"></span></div>
+      <div><span class="label">Disponible para gastar</span><span class="mid" id="ahDisp">—</span><span class="sub">Tu saldo, sin contar lo que está en bolsillos</span></div>
+    </div>
+    <div class="tclist" id="ahList"></div>
+    <details class="addtc" id="ahAdd">
+      <summary id="ahAddSummary">+ Crear un bolsillo</summary>
+      <form id="ahForm" autocomplete="off">
+        <div class="field">
+          <span class="flabel">Ícono</span>
+          <div class="cats" id="ahEmojis" role="group" aria-label="Ícono del bolsillo"></div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="a-nombre">Nombre del bolsillo</label>
+            <input id="a-nombre" placeholder="Ej. Viaje a Cartagena" maxlength="30" required>
+          </div>
+          <div class="field">
+            <label for="a-meta">Meta (opcional)</label>
+            <input id="a-meta" inputmode="decimal" placeholder="Ej. 2.000.000">
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="a-fecha">¿Para cuándo? (opcional)</label>
+            <input id="a-fecha" type="date">
+          </div>
+          <div class="field">
+            <label for="a-inicial">¿Ya tienes algo guardado para esto? (opcional)</label>
+            <input id="a-inicial" inputmode="decimal" placeholder="0">
+          </div>
+        </div>
+        <div class="actions">
+          <button class="primary" type="submit" id="ahSave">Crear bolsillo</button>
+          <button class="ghost" type="button" id="ahCancel">Cancelar</button>
+        </div>
+      </form>
+    </details>
+    <span class="hint">Al guardar dinero en un bolsillo, sale de tu saldo disponible para que no lo gastes sin darte cuenta; al sacarlo, vuelve. Guardar o sacar no cuenta como gasto ni como ingreso.</span>
+  </section>
+
   <section class="panel" aria-labelledby="setTitle" id="ajustesPanel" data-view="ajustes">
     <h2 id="setTitle">Ajustes</h2>
+    <div class="field">
+      <span class="flabel">Color de la app</span>
+      <div class="temas" id="temaPicker" role="radiogroup" aria-label="Color de la app"></div>
+    </div>
+    <div class="field">
+      <span class="flabel">Modo</span>
+      <div class="seg seg3" id="modoPicker" role="radiogroup" aria-label="Modo claro u oscuro">
+        <button type="button" data-modo="auto">Automático</button>
+        <button type="button" data-modo="claro">Claro</button>
+        <button type="button" data-modo="oscuro">Oscuro</button>
+      </div>
+      <span class="hint">Automático sigue el modo de tu teléfono. El color se guarda en tu cuenta y se aplica en todos tus dispositivos.</span>
+    </div>
     <div class="settings">
       <div class="field">
         <label for="s-saldo">¿Cuánto dinero tienes hoy?</label>
@@ -562,6 +659,7 @@ details.addtc form{padding:16px}
   </div>
   <a href="#inicio" data-nav="inicio">Inicio<span>Saldo, resumen y movimientos</span></a>
   <a href="#tarjetas" data-nav="tarjetas">Tarjetas de crédito<span>Deudas, tasas y cuánto pagar</span></a>
+  <a href="#ahorros" data-nav="ahorros">Bolsillos de ahorro<span>Separa dinero para tus metas</span></a>
   <a href="#cuenta" data-nav="cuenta">Cuenta y nube<span>Inicia sesión y sincroniza</span></a>
   <a href="#atajo" data-nav="atajo" id="navAtajo" hidden>Atajo del iPhone<span>Anota desde el Centro de control</span></a>
   <a href="#ajustes" data-nav="ajustes">Ajustes<span>Saldo, moneda, presupuesto y copias</span></a>
@@ -585,6 +683,10 @@ const CATS={
     {id:"regalo",n:"Regalos",c:"--c8"},{id:"reembolso",n:"Reembolsos",c:"--c3"},{id:"otros_ing",n:"Otros ingresos",c:"--c9"}]
 };
 const PAGO_CAT={id:"pago",n:"Pago de tarjeta",c:"--c5"};
+const AHORRO_CAT={id:"ahorro",n:"Ahorro",c:"--c6"};
+const BOL_EMOJIS=["🐷","✈️","🏖️","🚗","🏠","🎓","💻","🎁","🩺","💍","🛡️","🎉"];
+// Colores de la app: [id, nombre, color de muestra]
+const TEMAS=[["pino","Pino","#1F6F5C"],["oceano","Océano","#2563A8"],["uva","Uva","#6D4BB0"],["coral","Coral","#C2456A"],["mandarina","Mandarina","#B9541A"],["grafito","Grafito","#3F4A5A"]];
 
 // Tasa de usura certificada por la Superfinanciera (consumo y ordinario). Actualizar cada mes.
 const USURA={ea:28.59,vigencia:"octubre de 2026"};
@@ -595,10 +697,11 @@ let REF_FECHA="9 de octubre de 2026";
 const OTRO_BANCO="Otro banco";
 const MESES_OPC=[1,2,3,6,9,12,18,24,36,48];
 
-const tipoOf=g=>g.tipo==="ingreso"||g.tipo==="pago"?g.tipo:"gasto"; // los registros viejos no tienen tipo: son gastos
+// los registros viejos no tienen tipo: son gastos. "ahorro" = dinero que entra o sale de un bolsillo
+const tipoOf=g=>g.tipo==="ingreso"||g.tipo==="pago"||g.tipo==="ahorro"?g.tipo:"gasto";
 // el atajo manda el nombre ("Comida"), la app guarda el id ("comida"): aceptamos los dos
 const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").trim();
-const catOf=g=>{const t=tipoOf(g);if(t==="pago")return PAGO_CAT;const l=CATS[t],k=norm(g.categoria);return l.find(c=>c.id===g.categoria||norm(c.n)===k)||l[l.length-1]};
+const catOf=g=>{const t=tipoOf(g);if(t==="pago")return PAGO_CAT;if(t==="ahorro")return AHORRO_CAT;const l=CATS[t],k=norm(g.categoria);return l.find(c=>c.id===g.categoria||norm(c.n)===k)||l[l.length-1]};
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const pad=n=>String(n).padStart(2,"0");
@@ -608,8 +711,9 @@ const dateStr=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
 const hoy=()=>dateStr(today);
 const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
-const AJ_DEF={moneda:"COP",presupuesto:0,saldoBase:0,saldoFijado:false};
-let movs=[], tarjetas=[], ajustes={...AJ_DEF};
+const AJ_DEF={moneda:"COP",presupuesto:0,saldoBase:0,saldoFijado:false,tema:"pino",modo:"auto"};
+let movs=[], tarjetas=[], bolsillos=[], ajustes={...AJ_DEF};
+let bolOpen=null /* {id, kind:"entra"|"sale"} */, bolConfirm=null, bolEditId=null, bolEmoji=BOL_EMOJIS[0];
 let ym={y:today.getFullYear(),m:today.getMonth()};
 let filtro="", editId=null, tipoSel="gasto", catSel="comida", confirmId=null;
 let tcEditId=null, tcOpen=null /* {id, kind:"pago"|"deuda"} */, tcConfirm=null, tasaAuto=true;
@@ -620,11 +724,12 @@ function leerLocal(){
 }
 function load(){
   const d=leerLocal();
-  movs=Array.isArray(d?.gastos)?d.gastos:[]; tarjetas=Array.isArray(d?.tarjetas)?d.tarjetas:[]; ajustes={...AJ_DEF,...(d?.ajustes||{})};
+  movs=Array.isArray(d?.gastos)?d.gastos:[]; tarjetas=Array.isArray(d?.tarjetas)?d.tarjetas:[];
+  bolsillos=Array.isArray(d?.bolsillos)?d.bolsillos:[]; ajustes={...AJ_DEF,...(d?.ajustes||{})};
 }
 function persist(){
   if(nube()) return true; // con sesión iniciada los datos viven en la nube
-  try{localStorage.setItem(KEY,JSON.stringify({gastos:movs,tarjetas,ajustes}));return true}
+  try{localStorage.setItem(KEY,JSON.stringify({gastos:movs,tarjetas,bolsillos,ajustes}));return true}
   catch{toast("No se pudo guardar. Revisa el espacio libre del teléfono.");return false}
 }
 
@@ -669,6 +774,14 @@ function delTarjeta(id){
   tarjetas=tarjetas.filter(t=>t.id!==id);
   if(nube()){fb.F.deleteDoc(uref("tarjetas",id)).catch(errNube);return true} return persist();
 }
+function putBolsillo(b){
+  if(nube()){bolsillos=upsert(bolsillos,b);fb.F.setDoc(uref("bolsillos",b.id),sinId(b)).catch(errNube);return true}
+  const before=bolsillos; bolsillos=upsert(bolsillos,b); if(!persist()){bolsillos=before;return false} return true;
+}
+function delBolsillo(id){
+  bolsillos=bolsillos.filter(b=>b.id!==id);
+  if(nube()){fb.F.deleteDoc(uref("bolsillos",id)).catch(errNube);return true} return persist();
+}
 function putAjustes(){
   if(nube()){fb.F.setDoc(uref("config","ajustes"),limpio(ajustes)).catch(errNube);return true} return persist();
 }
@@ -683,9 +796,10 @@ async function subirTodo(lista,col){
 function pararNube(){unsubs.forEach(u=>u());unsubs=[]}
 function escucharNube(){
   pararNube(); migrado=false;
-  const F=fb.F, listo={m:false,t:false,a:false,aExiste:false};
+  const F=fb.F, listo={m:false,t:false,b:false,a:false,aExiste:false};
   const errSnap=e=>{console.warn(e);mostrarErrorNube("No se pudieron leer tus datos de la nube. Revisa tu conexión.")};
-  const tras=()=>{render(); if(listo.m&&listo.t&&listo.a) migrarLocal(listo.aExiste)};
+  const tras=()=>{render(); if(listo.m&&listo.t&&listo.b&&listo.a) migrarLocal(listo.aExiste)};
+  unsubs.push(F.onSnapshot(ucol("bolsillos"),{includeMetadataChanges:true},s=>{bolsillos=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.b=true;tras()},errSnap));
   unsubs.push(F.onSnapshot(ucol("movs"),{includeMetadataChanges:true},s=>{movs=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.m=true;tras()},errSnap));
   unsubs.push(F.onSnapshot(ucol("tarjetas"),{includeMetadataChanges:true},s=>{tarjetas=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.t=true;tras()},errSnap));
   unsubs.push(F.onSnapshot(uref("config","ajustes"),{includeMetadataChanges:true},s=>{ajustes={...AJ_DEF,...(s.exists()?s.data():{})};if(!s.metadata.fromCache){listo.a=true;listo.aExiste=s.exists()}tras()},errSnap));
@@ -695,11 +809,11 @@ function escucharNube(){
 async function migrarLocal(ajustesEnNube){
   if(migrado) return; migrado=true;
   const d=leerLocal(); if(!d) return;
-  const lm=Array.isArray(d.gastos)?d.gastos:[], lt=Array.isArray(d.tarjetas)?d.tarjetas:[];
-  const ids=new Set(movs.map(g=>g.id)), tids=new Set(tarjetas.map(t=>t.id));
-  const nm=lm.filter(g=>g&&g.id&&!ids.has(g.id)), nt=lt.filter(t=>t&&t.id&&!tids.has(t.id));
+  const lm=Array.isArray(d.gastos)?d.gastos:[], lt=Array.isArray(d.tarjetas)?d.tarjetas:[], lb=Array.isArray(d.bolsillos)?d.bolsillos:[];
+  const ids=new Set(movs.map(g=>g.id)), tids=new Set(tarjetas.map(t=>t.id)), bids=new Set(bolsillos.map(b=>b.id));
+  const nm=lm.filter(g=>g&&g.id&&!ids.has(g.id)), nt=lt.filter(t=>t&&t.id&&!tids.has(t.id)), nb=lb.filter(b=>b&&b.id&&!bids.has(b.id));
   try{
-    await subirTodo(nm,"movs"); await subirTodo(nt,"tarjetas");
+    await subirTodo(nm,"movs"); await subirTodo(nt,"tarjetas"); await subirTodo(nb,"bolsillos");
     if(!ajustesEnNube&&d.ajustes) await fb.F.setDoc(uref("config","ajustes"),limpio({...AJ_DEF,...d.ajustes}));
     try{localStorage.setItem(KEY+".respaldo",JSON.stringify(d));localStorage.removeItem(KEY)}catch{}
     if(nm.length||nt.length) toast(`Subí a tu cuenta ${nm.length} movimiento${nm.length===1?"":"s"}${nt.length?` y ${nt.length} tarjeta${nt.length===1?"":"s"}`:""} de este dispositivo`);
@@ -740,7 +854,8 @@ function toast(msg){const t=$("toast");t.textContent=msg;t.hidden=false;clearTim
 const inMonth=(g,y,m)=>(g.fecha||"").startsWith(monthKey(y,m));
 const sum=a=>a.reduce((s,g)=>s+(+g.monto||0),0);
 // efecto de un movimiento en el dinero que tienes: una compra con tarjeta no lo toca, el pago de la tarjeta sí
-const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:(g.tarjeta?0:-m)};
+// guardar en un bolsillo saca dinero del disponible; sacarlo del bolsillo lo devuelve
+const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:t==="ahorro"?(g.dir==="sale"?m:-m):(g.tarjeta?0:-m)};
 const hastaHoy=()=>movs.filter(g=>(g.fecha||"")<=hoy());
 const netoHastaHoy=()=>hastaHoy().reduce((s,g)=>s+efectivo(g),0);
 const saldo=()=>(+ajustes.saldoBase||0)+netoHastaHoy();
@@ -756,6 +871,19 @@ function tcPlan(t){
   if(P<=0) return {P:0,i,n,cuota:0,total:manejo,intereses:0,interesMes:0,manejo};
   const cuota=i>0?P*i/(1-Math.pow(1+i,-n)):P/n;
   return {P,i,n,cuota,total:cuota+manejo,intereses:cuota*n-P,interesMes:P*i,manejo};
+}
+
+// bolsillos: su saldo es lo que has guardado menos lo que has sacado, hasta hoy
+const bolById=id=>bolsillos.find(b=>b.id===id);
+const bolNombre=b=>b?`${b.emoji||"🐷"} ${b.nombre}`:"Bolsillo borrado";
+const bolSaldo=id=>hastaHoy().reduce((s,g)=>tipoOf(g)!=="ahorro"||g.bolsillo!==id?s:s+(g.dir==="sale"?-1:1)*(+g.monto||0),0);
+const totalAhorrado=()=>bolsillos.reduce((s,b)=>s+bolSaldo(b.id),0);
+// meses completos que faltan hasta la fecha meta (mínimo 1)
+function mesesHasta(fecha){
+  if(!fecha) return 0;
+  const f=new Date(fecha+"T12:00"), h=new Date(hoy()+"T12:00");
+  const meses=(f.getFullYear()-h.getFullYear())*12+(f.getMonth()-h.getMonth())+(f.getDate()>=h.getDate()?0:-1);
+  return f<h?0:Math.max(1,meses);
 }
 
 /* ---------- render ---------- */
@@ -778,6 +906,9 @@ function render(){
   const planes=tarjetas.map(tcPlan), reservar=planes.reduce((a,p)=>a+(p.P>0?p.total:0),0);
   $("bReserve").hidden=!(ajustes.saldoFijado&&reservar>0);
   if(reservar>0) $("bReserve").innerHTML=`<span>Separa para tarjetas este mes: <b>${fmt(reservar)}</b></span><span>Te queda libre: <b>${fmt(s-reservar)}</b></span>`;
+  const ahorrado=totalAhorrado();
+  $("bAhorro").hidden=!(bolsillos.length&&ahorrado>0);
+  $("bAhorro").textContent=`Además tienes ${fmt(ahorrado)} en bolsillos de ahorro · total ${fmt(s+ahorrado)}`;
 
   // mes
   $("sIng").textContent=fmt(tIng);
@@ -816,7 +947,7 @@ function render(){
 
   // filtro
   const fsel=$("filter");
-  fsel.innerHTML=`<option value="">Todos los movimientos</option><option value="t:ingreso">Solo ingresos</option><option value="t:gasto">Solo gastos</option><option value="t:pago">Solo pagos a tarjetas</option>`
+  fsel.innerHTML=`<option value="">Todos los movimientos</option><option value="t:ingreso">Solo ingresos</option><option value="t:gasto">Solo gastos</option><option value="t:pago">Solo pagos a tarjetas</option><option value="t:ahorro">Solo bolsillos de ahorro</option>`
     +`<optgroup label="Gastos">${CATS.gasto.map(c=>`<option value="c:${c.id}">${c.n}</option>`).join("")}</optgroup>`
     +`<optgroup label="Ingresos">${CATS.ingreso.map(c=>`<option value="c:${c.id}">${c.n}</option>`).join("")}</optgroup>`;
   fsel.value=filtro;
@@ -826,18 +957,20 @@ function render(){
   const rows=mes.filter(pasa).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
   $("list").innerHTML=rows.length?rows.map(g=>{
     const c=catOf(g), d=new Date(g.fecha+"T12:00"), t=tipoOf(g);
-    const titulo=g.descripcion||(t==="pago"?"Pago a "+tcNombre(tcById(g.tarjeta)):c.n);
-    const metodo=g.tarjeta&&t==="gasto"?"Crédito · "+tcNombre(tcById(g.tarjeta)):(t==="pago"?tcNombre(tcById(g.tarjeta)):g.metodo||"");
+    const titulo=g.descripcion||(t==="pago"?"Pago a "+tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.dir==="sale"?"Sacado de ":"Guardado en ")+bolNombre(bolById(g.bolsillo)):c.n);
+    const metodo=g.tarjeta&&t==="gasto"?"Crédito · "+tcNombre(tcById(g.tarjeta)):(t==="pago"?tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.dir==="sale"?"Vuelve a tu saldo":"Sale de tu saldo"):g.metodo||"");
     return `<div class="item ${t}">
       <div class="day"><strong>${pad(d.getDate())}</strong>${d.toLocaleDateString("es",{weekday:"short"}).replace(".","")}</div>
       <div class="desc"><div class="t">${esc(titulo)}</div>
         <div class="m"><span><span class="dot" style="background:var(${c.c})"></span> ${c.n}</span><span>${esc(metodo)}</span></div></div>
-      <div class="amt">${t==="ingreso"?"+":"−"}${fmt(+g.monto||0)}</div>
-      <div class="tiny">${t==="pago"?"":`<button data-edit="${g.id}">Editar</button>`}<button data-del="${g.id}" class="${confirmId===g.id?"confirm":""}">${confirmId===g.id?"¿Borrar?":"Borrar"}</button></div>
+      <div class="amt">${t==="ingreso"||(t==="ahorro"&&g.dir==="sale")?"+":"−"}${fmt(+g.monto||0)}</div>
+      <div class="tiny">${t==="pago"||t==="ahorro"?"":`<button data-edit="${g.id}">Editar</button>`}<button data-del="${g.id}" class="${confirmId===g.id?"confirm":""}">${confirmId===g.id?"¿Borrar?":"Borrar"}</button></div>
     </div>`}).join("")
     :`<div class="empty"><strong>${filtro?"Nada con este filtro":"Aún no hay movimientos en "+monthName(y,m,{month:"long"})}</strong><span>Usa el formulario para registrar un gasto o un ingreso.</span></div>`;
 
   renderTarjetas();
+  renderBolsillos(s);
+  aplicarApariencia();
 
   const ae=document.activeElement;
   if(ae!==$("s-moneda")) $("s-moneda").value=ajustes.moneda||"COP";
@@ -909,6 +1042,118 @@ function renderTarjetas(){
   if(cur&&[...fsel.options].some(o=>o.value===cur)) fsel.value=cur; else fsel.selectedIndex=0;
   syncTarjetaField();
 }
+
+/* ---------- bolsillos de ahorro ---------- */
+function renderBolsillos(saldoDisp){
+  const lista=bolsillos.map(b=>({b,saldo:bolSaldo(b.id)})).sort((a,c)=>(a.b.creado||0)-(c.b.creado||0));
+  const total=lista.reduce((s,x)=>s+x.saldo,0);
+  $("ahTotal").textContent=fmt(total);
+  $("ahCount").textContent=bolsillos.length?`En ${bolsillos.length} bolsillo${bolsillos.length===1?"":"s"}`:"Aún no tienes bolsillos";
+  $("ahDisp").textContent=ajustes.saldoFijado?fmt(saldoDisp):"Escribe tu saldo en Ajustes";
+  $("ahAddSummary").textContent=bolsillos.length?"+ Crear otro bolsillo":"+ Crear un bolsillo";
+  $("ahList").innerHTML=lista.length?lista.map(({b,saldo})=>{
+    const meta=+b.meta||0, prog=meta>0?Math.min(1,Math.max(0,saldo)/meta):0, falta=Math.max(0,meta-saldo);
+    const meses=mesesHasta(b.fechaMeta), open=bolOpen&&bolOpen.id===b.id?bolOpen.kind:null;
+    let plan="";
+    if(meta>0&&falta<=0) plan=`<span class="pill">¡Meta cumplida! 🎉</span>`;
+    else if(meta>0&&b.fechaMeta&&meses>0) plan=`Para llegar a tiempo, guarda <b>${fmt(Math.ceil(falta/meses))}</b> al mes durante ${meses} ${meses===1?"mes":"meses"}.`;
+    else if(meta>0&&b.fechaMeta) plan=`La fecha de la meta ya pasó; te faltan ${fmt(falta)}.`;
+    return `<article class="tc" data-bol="${b.id}">
+      <div class="tc-top">
+        <div class="bol-head"><span class="bol-emoji">${esc(b.emoji||"🐷")}</span>
+          <div class="tc-name"><div class="n">${esc(b.nombre)}</div>
+          <div class="sub">${meta>0?`Meta: ${fmt(meta)}`:"Sin meta"}${b.fechaMeta?` · para el ${new Date(b.fechaMeta+"T12:00").toLocaleDateString("es",{day:"numeric",month:"short",year:"numeric"})}`:""}</div></div></div>
+        ${meta>0?`<span class="pill ${prog>=1?"":""}">${Math.round(prog*100)}%</span>`:""}
+      </div>
+      <span class="bol-saldo">${fmt(saldo)}</span>
+      ${meta>0?`<div class="meter"><i style="width:${prog*100}%"></i></div><span class="sub">${falta>0?`Te faltan ${fmt(falta)}`:"Llegaste a tu meta"}</span>`:""}
+      ${plan?`<div class="tc-plan"><span>${plan}</span></div>`:""}
+      <div class="actions">
+        <button class="primary sm" data-bact="entra">Guardar dinero</button>
+        <button class="ghost sm" data-bact="sale" ${saldo>0?"":"disabled"}>Sacar dinero</button>
+        <button class="ghost sm" data-bact="editar">Editar</button>
+        <button class="ghost sm" data-bact="borrar">${bolConfirm===b.id?(saldo>0?`¿Borrar? Vuelven ${fmt(saldo)} a tu saldo`:"¿Borrar bolsillo?"):"Borrar"}</button>
+      </div>
+      ${open?`<form class="tc-inline two" data-bform="${open}">
+        <div class="field"><label for="b-monto-${b.id}">${open==="entra"?"¿Cuánto vas a guardar?":"¿Cuánto vas a sacar?"}</label><input id="b-monto-${b.id}" inputmode="decimal" placeholder="${open==="sale"?Math.round(saldo):(meta>0&&b.fechaMeta&&meses>0?Math.ceil(falta/meses):0)}" required></div>
+        <div class="field"><label for="b-fecha-${b.id}">Fecha</label><input id="b-fecha-${b.id}" type="date" value="${hoy()}" required></div>
+        <button class="primary sm" type="submit">${open==="entra"?"Guardar":"Sacar"}</button>
+        <span class="hint" style="grid-column:1/-1">${open==="entra"?"Este dinero sale de tu saldo disponible y queda separado en el bolsillo.":`Vuelve a tu saldo disponible. En el bolsillo hay ${fmt(saldo)}.`}</span>
+      </form>`:""}
+    </article>`}).join("")
+    :`<div class="empty"><strong>Todavía no tienes bolsillos</strong><span>Crea uno para cada meta (un viaje, una emergencia, un regalo) y ve guardando poco a poco.</span></div>`;
+}
+function renderEmojis(){
+  $("ahEmojis").innerHTML=BOL_EMOJIS.map(e=>`<button type="button" class="cat emoji" data-emoji="${e}" aria-pressed="${e===bolEmoji}" aria-label="Ícono ${e}">${e}</button>`).join("");
+}
+function resetBolForm(){
+  bolEditId=null; bolEmoji=BOL_EMOJIS[0]; $("ahForm").reset(); renderEmojis();
+  $("ahSave").textContent="Crear bolsillo"; $("a-inicial").closest(".field").hidden=false;
+}
+$("ahEmojis").onclick=e=>{const b=e.target.closest("[data-emoji]");if(b){bolEmoji=b.dataset.emoji;renderEmojis()}};
+$("ahCancel").onclick=()=>{resetBolForm();$("ahAdd").open=false};
+$("ahForm").onsubmit=e=>{
+  e.preventDefault();
+  const nombre=$("a-nombre").value.trim(); if(!nombre){toast("Ponle un nombre al bolsillo.");$("a-nombre").focus();return}
+  const meta=parseMonto($("a-meta").value), inicial=parseMonto($("a-inicial").value);
+  const prev=bolEditId?bolById(bolEditId):null;
+  const b={id:bolEditId||newId("b"),nombre,emoji:bolEmoji,meta:meta>0?Math.round(meta*100)/100:0,fechaMeta:$("a-fecha").value||"",creado:prev?.creado||Date.now()};
+  if(!putBolsillo(b)) return;
+  if(!prev&&inicial>0) putMov({id:newId("a"),tipo:"ahorro",bolsillo:b.id,dir:"entra",monto:Math.round(inicial*100)/100,descripcion:"",categoria:"ahorro",fecha:hoy(),metodo:"",creado:Date.now()});
+  toast(prev?"Bolsillo actualizado":`Bolsillo «${nombre}» creado`);
+  resetBolForm(); $("ahAdd").open=false; render();
+};
+$("ahList").onclick=e=>{
+  const btn=e.target.closest("[data-bact]"); if(!btn) return;
+  const id=btn.closest("[data-bol]").dataset.bol, b=bolById(id), act=btn.dataset.bact;
+  if(act==="entra"||act==="sale"){
+    bolOpen=bolOpen&&bolOpen.id===id&&bolOpen.kind===act?null:{id,kind:act}; render();
+    if(bolOpen) $("b-monto-"+id)?.focus();
+  }
+  if(act==="editar"){
+    bolEditId=id; bolEmoji=b.emoji||BOL_EMOJIS[0]; renderEmojis();
+    $("a-nombre").value=b.nombre; $("a-meta").value=b.meta||""; $("a-fecha").value=b.fechaMeta||"";
+    $("a-inicial").closest(".field").hidden=true; $("ahSave").textContent="Guardar cambios";
+    $("ahAdd").open=true; $("ahAdd").scrollIntoView({behavior:"smooth",block:"start"});
+  }
+  if(act==="borrar"){
+    if(bolConfirm===id){
+      bolConfirm=null;
+      // lo que quedaba en el bolsillo vuelve al saldo disponible antes de borrarlo
+      const resto=bolSaldo(id);
+      if(resto>0) putMov({id:newId("a"),tipo:"ahorro",bolsillo:id,dir:"sale",monto:Math.round(resto*100)/100,descripcion:`Cierre de ${b.nombre}`,categoria:"ahorro",fecha:hoy(),metodo:"",creado:Date.now()});
+      delBolsillo(id); render(); toast(resto>0?`Bolsillo borrado: ${fmt(resto)} volvieron a tu saldo`:"Bolsillo borrado");
+    } else {bolConfirm=id;render();setTimeout(()=>{if(bolConfirm===id){bolConfirm=null;render()}},4000)}
+  }
+};
+$("ahList").onsubmit=e=>{
+  e.preventDefault();
+  const f=e.target, id=f.closest("[data-bol]").dataset.bol, dir=f.dataset.bform;
+  const monto=parseMonto($("b-monto-"+id).value), fecha=$("b-fecha-"+id).value||hoy();
+  if(!(monto>0)){toast("Escribe un monto mayor que cero.");return}
+  if(dir==="sale"&&monto>bolSaldo(id)+0.001){toast(`No puedes sacar más de lo que hay (${fmt(bolSaldo(id))}).`);return}
+  if(!putMov({id:newId("a"),tipo:"ahorro",bolsillo:id,dir,monto:Math.round(monto*100)/100,descripcion:"",categoria:"ahorro",fecha,metodo:"",creado:Date.now()})) return;
+  bolOpen=null; render();
+  toast(dir==="entra"?`Guardaste ${fmt(monto)} en ${bolNombre(bolById(id))}`:`Sacaste ${fmt(monto)}: volvió a tu saldo`);
+  if(dir==="entra"&&ajustes.saldoFijado&&saldo()<0) setTimeout(()=>toast("Ojo: guardaste más de lo que tenías disponible."),2700);
+};
+
+/* ---------- apariencia ---------- */
+function aplicarApariencia(){
+  const r=document.documentElement, tema=TEMAS.some(t=>t[0]===ajustes.tema)?ajustes.tema:"pino", modo=["claro","oscuro"].includes(ajustes.modo)?ajustes.modo:"auto";
+  if(tema==="pino") delete r.dataset.tema; else r.dataset.tema=tema;
+  if(modo==="auto") delete r.dataset.modo; else r.dataset.modo=modo;
+  try{localStorage.setItem("tebille.apariencia",JSON.stringify({tema,modo}))}catch{}
+  // la barra del navegador / del sistema toma el color de fondo del tema
+  const bg=getComputedStyle(r).getPropertyValue("--bg").trim();
+  document.querySelectorAll('meta[name="theme-color"]').forEach(m=>m.setAttribute("content",bg));
+  $("temaPicker").querySelectorAll("[data-tema]").forEach(b=>b.setAttribute("aria-checked",b.dataset.tema===tema));
+  $("modoPicker").querySelectorAll("[data-modo]").forEach(b=>b.setAttribute("aria-checked",b.dataset.modo===modo));
+}
+$("temaPicker").innerHTML=TEMAS.map(([id,n,c])=>`<button type="button" class="tema" role="radio" data-tema="${id}" aria-checked="false"><i style="background:${c}"></i>${n}</button>`).join("");
+$("temaPicker").onclick=e=>{const b=e.target.closest("[data-tema]");if(!b)return;ajustes={...ajustes,tema:b.dataset.tema};putAjustes();aplicarApariencia()};
+$("modoPicker").onclick=e=>{const b=e.target.closest("[data-modo]");if(!b)return;ajustes={...ajustes,modo:b.dataset.modo};putAjustes();aplicarApariencia()};
+matchMedia("(prefers-color-scheme: dark)").addEventListener?.("change",()=>aplicarApariencia());
 
 function syncTarjetaField(){
   $("f-tarjeta-wrap").hidden=!(tipoSel==="gasto"&&$("f-metodo").value==="Crédito"&&tarjetas.length);
@@ -1091,7 +1336,7 @@ $("saveSettings").onclick=()=>{
 /* ---------- copia de seguridad ---------- */
 $("exportBtn").onclick=async()=>{
   // la clave del atajo no viaja en las copias
-  const json=JSON.stringify({app:"tebille",version:3,exportado:new Date().toISOString(),gastos:movs.map(({clave,...g})=>g),tarjetas,ajustes},null,2);
+  const json=JSON.stringify({app:"tebille",version:3,exportado:new Date().toISOString(),gastos:movs.map(({clave,...g})=>g),tarjetas,bolsillos,ajustes},null,2);
   const name=`tebille-${dateStr(new Date())}.json`;
   const file=new File([json],name,{type:"application/json"});
   try{
@@ -1110,12 +1355,13 @@ $("importFile").onchange=async e=>{
     const ids=new Set(movs.map(g=>g.id)), tids=new Set(tarjetas.map(t=>t.id));
     const nuevos=d.gastos.filter(g=>g&&g.id&&g.fecha&&+g.monto>0&&!ids.has(g.id));
     const nuevasT=(Array.isArray(d.tarjetas)?d.tarjetas:[]).filter(t=>t&&t.id&&t.banco&&!tids.has(t.id));
+    const bids=new Set(bolsillos.map(b=>b.id)), nuevosB=(Array.isArray(d.bolsillos)?d.bolsillos:[]).filter(b=>b&&b.id&&b.nombre&&!bids.has(b.id));
     // en un dispositivo sin datos, la copia también trae moneda, presupuesto y saldo
     const vacio=!movs.length;
     if(d.ajustes&&vacio) ajustes={...ajustes,...d.ajustes};
     if(nube()){
-      await subirTodo(nuevos,"movs"); await subirTodo(nuevasT,"tarjetas"); if(d.ajustes&&vacio) putAjustes();
-    } else { movs=[...movs,...nuevos]; tarjetas=[...tarjetas,...nuevasT]; if(!persist()) return; }
+      await subirTodo(nuevos,"movs"); await subirTodo(nuevasT,"tarjetas"); await subirTodo(nuevosB,"bolsillos"); if(d.ajustes&&vacio) putAjustes();
+    } else { movs=[...movs,...nuevos]; tarjetas=[...tarjetas,...nuevasT]; bolsillos=[...bolsillos,...nuevosB]; if(!persist()) return; }
     {render();toast(`Se importaron ${nuevos.length} movimiento${nuevos.length===1?"":"s"}${nuevasT.length?` y ${nuevasT.length} tarjeta${nuevasT.length===1?"":"s"}`:""}`)}
   }catch{toast("Ese archivo no es una copia de Tebille.")}
 };
@@ -1141,7 +1387,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=27;
+const APP_VERSION=28;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){
@@ -1263,7 +1509,7 @@ document.addEventListener("click",async e=>{
 
 /* ---------- menú de 3 rayas y vistas ---------- */
 // Cada sección tiene data-view; el menú cambia la vista con #inicio, #tarjetas, etc. (el botón atrás de Android funciona)
-const VISTAS={inicio:"",tarjetas:"Tarjetas de crédito",cuenta:"Cuenta y nube",atajo:"Atajo del iPhone",ajustes:"Ajustes",iphone:"Instalar en iPhone",acerca:"Acerca de Tebille"};
+const VISTAS={inicio:"",tarjetas:"Tarjetas de crédito",cuenta:"Cuenta y nube",atajo:"Atajo del iPhone",ahorros:"Bolsillos de ahorro",ajustes:"Ajustes",iphone:"Instalar en iPhone",acerca:"Acerca de Tebille"};
 let vistaActual="inicio";
 function mostrarVista(){
   let v=location.hash.slice(1); if(!(v in VISTAS)) v="inicio";
@@ -1292,7 +1538,7 @@ $("acercaVersion").textContent=`Versión ${APP_VERSION}`; $("acercaAnio").textCo
 mostrarVista();
 
 /* ---------- inicio ---------- */
-load(); resetForm(); resetTcForm(); render(); renderCuenta(); cargarTasas();
+load(); resetForm(); resetTcForm(); resetBolForm(); render(); renderCuenta(); cargarTasas();
 
 // Accesos directos del ícono en Android ("Anotar gasto" / "Anotar ingreso"): abren el formulario listo
 (()=>{
