@@ -308,7 +308,11 @@ details.addtc form{padding:16px}
     <span class="sub" id="bSub"></span>
     <span class="ahorro-linea" id="bAhorro" hidden></span>
     <div class="reserve" id="bReserve" hidden></div>
-    <button type="button" id="bAjustar">Ajustar saldo</button>
+    <span class="ahorro-linea" id="bRinde" hidden></span>
+    <div class="actions">
+      <button type="button" id="bAjustar">Ajustar saldo</button>
+      <button type="button" id="bRend" hidden>Registrar rendimiento</button>
+    </div>
   </section>
 
   <section class="summary" aria-label="Resumen del mes" data-view="inicio">
@@ -664,6 +668,14 @@ details.addtc form{padding:16px}
         <input id="s-saldo" inputmode="decimal" placeholder="Ej. 1.250.000">
       </div>
       <div class="field">
+        <label for="s-entidad">¿Dónde tienes ese dinero?</label>
+        <select id="s-entidad"></select>
+      </div>
+      <div class="field">
+        <label for="s-tasa">¿Cuánto rinde? (% E.A.)</label>
+        <input id="s-tasa" inputmode="decimal" placeholder="0 si no rinde">
+      </div>
+      <div class="field">
         <label for="s-moneda">Moneda</label>
         <select id="s-moneda">
           <option value="COP">Peso colombiano (COP)</option><option value="USD">Dólar (USD)</option>
@@ -722,7 +734,7 @@ const CATS={
     {id:"compras",n:"Compras",c:"--c7"},{id:"educacion",n:"Educación",c:"--c8"},{id:"otros",n:"Otros",c:"--c9"}],
   ingreso:[
     {id:"salario",n:"Salario",c:"--c1"},{id:"negocio",n:"Negocio",c:"--c2"},{id:"extra",n:"Trabajos extra",c:"--c6"},
-    {id:"regalo",n:"Regalos",c:"--c8"},{id:"reembolso",n:"Reembolsos",c:"--c3"},{id:"otros_ing",n:"Otros ingresos",c:"--c9"}]
+    {id:"regalo",n:"Regalos",c:"--c8"},{id:"reembolso",n:"Reembolsos",c:"--c3"},{id:"rendimientos",n:"Rendimientos",c:"--c7"},{id:"otros_ing",n:"Otros ingresos",c:"--c9"}]
 };
 const PAGO_CAT={id:"pago",n:"Pago de tarjeta",c:"--c5"};
 const AHORRO_CAT={id:"ahorro",n:"Ahorro",c:"--c6"};
@@ -995,6 +1007,13 @@ function render(){
   const ahorrado=totalAhorrado();
   $("bAhorro").hidden=!(bolsillos.length&&ahorrado>0);
   $("bAhorro").textContent=`Además tienes ${fmt(ahorrado)} en bolsillos de ahorro · total ${fmt(s+ahorrado)}`;
+  // si el saldo está en una cajita que rinde (p. ej. Nu), mostrar cuánto crece
+  const st=+ajustes.saldoTasa||0, se=ajustes.saldoEntidad||"";
+  $("bRinde").hidden=!(ajustes.saldoFijado&&(st>0||se)); $("bRend").hidden=!(st>0);
+  if(st>0){
+    const rendMes=sum(ing.filter(g=>catOf(g).id==="rendimientos"));
+    $("bRinde").textContent=`Está en ${se||"una cuenta que rinde"} al ${pct(st)} E.A.: crece ≈ ${fmt(Math.max(0,s)*(Math.pow(1+st/100,1/12)-1))} al mes`+(rendMes?` · este mes registraste ${fmt(rendMes)}`:"");
+  } else if(se) $("bRinde").textContent=`Está en ${se}`;
 
   // mes
   $("sIng").textContent=fmt(tIng);
@@ -1073,6 +1092,9 @@ function render(){
   if(ae!==$("s-moneda")) $("s-moneda").value=ajustes.moneda||"COP";
   if(ae!==$("s-pres")) $("s-pres").value=ajustes.presupuesto||"";
   if(ae!==$("s-saldo")) $("s-saldo").value=ajustes.saldoFijado?Math.round(s*100)/100:"";
+  if(ae!==$("s-entidad")){ if(!$("s-entidad").options.length) $("s-entidad").innerHTML=`<option value="">No lo sé / varias partes</option>`+ENTIDADES.map(([n,p,t])=>`<option value="${esc(n)}" data-tasa="${t}">${esc(n)}${p?" — "+esc(p):""}</option>`).join("")+`<option>${OTRA_ENT}</option>`;
+    const se=ajustes.saldoEntidad||""; if(se&&![...$("s-entidad").options].some(o=>o.value===se)) $("s-entidad").insertAdjacentHTML("beforeend",`<option>${esc(se)}</option>`); $("s-entidad").value=se; }
+  if(ae!==$("s-tasa")) $("s-tasa").value=ajustes.saldoTasa?String(ajustes.saldoTasa).replace(".",","):"";
 }
 
 function renderTarjetas(){
@@ -1456,6 +1478,15 @@ $("bars").onclick=e=>{const b=e.target.closest("[data-cat]");if(b){const v="c:"+
 $("filter").onchange=e=>{filtro=e.target.value;render()};
 $("cancelEdit").onclick=resetForm;
 $("bAjustar").onclick=()=>{location.hash="ajustes";setTimeout(()=>$("s-saldo").focus(),100)};
+// al elegir dónde está el saldo, se llena sola la tasa publicada (se puede cambiar)
+$("s-entidad").onchange=()=>{const t=$("s-entidad").selectedOptions[0]?.dataset.tasa;if(t!==undefined)$("s-tasa").value=+t>0?String(t).replace(".",","):""};
+// atajo: formulario listo para anotar lo que pagó la cajita como ingreso de "Rendimientos"
+$("bRend").onclick=()=>{
+  if(editId) resetForm();
+  tipoSel="ingreso"; catSel="rendimientos"; renderForm();
+  $("f-desc").value=`Rendimiento ${ajustes.saldoEntidad||""}`.trim();
+  $("form").scrollIntoView({behavior:"smooth",block:"start"}); setTimeout(()=>$("f-monto").focus(),300);
+};
 $("form").onsubmit=e=>{
   e.preventDefault();
   const monto=parseMonto($("f-monto").value);
@@ -1488,7 +1519,9 @@ $("list").onclick=e=>{
 };
 $("saveSettings").onclick=()=>{
   const p=parseMonto($("s-pres").value);
-  const next={...ajustes,moneda:$("s-moneda").value,presupuesto:p>0?Math.round(p*100)/100:0};
+  const st=parseTasa($("s-tasa").value);
+  const next={...ajustes,moneda:$("s-moneda").value,presupuesto:p>0?Math.round(p*100)/100:0,
+    saldoEntidad:$("s-entidad").value||"",saldoTasa:st>0&&st<100?Math.round(st*100)/100:0};
   const raw=$("s-saldo").value.trim();
   if(raw){
     const real=parseMonto(raw);
@@ -1554,7 +1587,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=29;
+const APP_VERSION=30;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){

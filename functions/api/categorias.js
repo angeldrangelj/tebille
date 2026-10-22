@@ -6,7 +6,7 @@
 
 const CATEGORIAS = {
   gasto: ["Comida", "Transporte", "Vivienda", "Servicios", "Salud", "Ocio", "Compras", "Educación", "Otros"],
-  ingreso: ["Salario", "Negocio", "Trabajos extra", "Regalos", "Reembolsos", "Otros ingresos"],
+  ingreso: ["Salario", "Negocio", "Trabajos extra", "Regalos", "Reembolsos", "Rendimientos", "Otros ingresos"],
 };
 
 export async function onRequestGet({ request }) {
