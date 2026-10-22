@@ -24,7 +24,15 @@ Tebille es una aplicación web de finanzas personales pensada para Colombia (pes
 - **Presupuesto por categoría**: límites mensuales por categoría con avisos al 80 % y al pasarse.
 - **Resumen del mes**: entró, salió, ahorro, rendimiento, gastos fijos pagados, comparación por categoría con el mes anterior y los gastos más grandes; se descarga como archivo para Excel (.csv).
 - **Me deben y debo**: préstamos con amigos y familia, pagos parciales, fecha límite y una calculadora para dividir cuentas.
-- **Categorías propias** con su color, y **foto del recibo** en cada gasto.
+- **Categorías propias** con su color, y **foto del recibo** en cada gasto; con un toque **lee el total, la fecha y el negocio de la foto** (OCR con Tesseract.js, en el propio teléfono).
+- **Así terminarías el mes**: proyección del saldo a fin de mes con tus gastos fijos pendientes y tu ritmo de gasto diario.
+- **Calendario**: pagos fijos, ingresos fijos, fechas de préstamos y lo que gastaste cada día.
+- **Patrimonio neto**: lo que tienes (saldo, bolsillos, lo que te deben) menos lo que debes, con su historia mes a mes.
+- **Plan para salir de deudas**: compara los métodos avalancha y bola de nieve con lo que puedes pagar al mes (meses hasta quedar libre e intereses).
+- **Retos de ahorro**: reto de las 52 semanas, una semana sin gastar en una categoría, meta del mes, y rachas de días anotando y días sin gastar.
+- **Recordatorio de la noche**: si a las 7 p. m. no has anotado nada, Tebille te lo recuerda al abrirla.
+- **Importar movimientos del banco** desde Excel o CSV, con detección de columnas, categoría automática y sin duplicados.
+- **Bloqueo con PIN** y, si quieres, con **huella o Face ID** (solo en ese dispositivo).
 - **Tasa de usura automática** desde los datos abiertos de la Superintendencia Financiera.
 - **Política de privacidad y términos de uso** (`privacidad.html`, `terminos.html`).
 - **Colores y modo oscuro**: elige entre 6 colores (Pino, Océano, Uva, Coral, Mandarina, Grafito) y modo automático, claro u oscuro.
