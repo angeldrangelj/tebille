@@ -462,6 +462,7 @@ details.addtc form{padding:16px}
             <select id="t-meses"></select>
           </div>
         </div>
+        <label class="check"><input type="checkbox" id="t-manejo-deuda"> Solo cobra cuota de manejo si debo algo (como Nu)</label>
         <div class="actions">
           <button class="primary" type="submit" id="tcSave">Guardar tarjeta</button>
           <button class="ghost" type="button" id="tcCancel">Cancelar</button>
@@ -675,6 +676,7 @@ details.addtc form{padding:16px}
         <label for="s-tasa">¿Cuánto rinde? (% E.A.)</label>
         <input id="s-tasa" inputmode="decimal" placeholder="0 si no rinde">
       </div>
+      <label class="check" style="grid-column:1/-1"><input type="checkbox" id="s-auto" checked> Sumar el rendimiento a mi saldo automáticamente (cálculo estimado, cada día)</label>
       <div class="field">
         <label for="s-moneda">Moneda</label>
         <select id="s-moneda">
@@ -944,7 +946,22 @@ const sum=a=>a.reduce((s,g)=>s+(+g.monto||0),0);
 const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:t==="ahorro"?(g.rendimiento?0:g.dir==="sale"?m:-m):(g.tarjeta?0:-m)};
 const hastaHoy=()=>movs.filter(g=>(g.fecha||"")<=hoy());
 const netoHastaHoy=()=>hastaHoy().reduce((s,g)=>s+efectivo(g),0);
-const saldo=()=>(+ajustes.saldoBase||0)+netoHastaHoy();
+// Rendimiento estimado del saldo cuando está en una cajita (p. ej. Nu): cada día, lo que tienes ese día
+// gana interés a la tasa E.A. y se suma (interés compuesto diario), igual que hace la cajita.
+const rendAuto=()=>+ajustes.saldoTasa>0&&ajustes.saldoRendAuto!==false&&ajustes.saldoFijado&&!!ajustes.saldoRendDesde;
+function rendSaldoEstimado(hasta){
+  if(!rendAuto()) return 0;
+  const desde=ajustes.saldoRendDesde; hasta=hasta||hoy();
+  if(hasta<=desde) return 0;
+  const r=Math.pow(1+(+ajustes.saldoTasa)/100,1/365)-1, porDia={};
+  let bal=+ajustes.saldoBase||0, acum=0;
+  movs.forEach(g=>{const f=g.fecha||"";if(f<desde)bal+=efectivo(g);else if(f<hasta)porDia[f]=(porDia[f]||0)+efectivo(g)});
+  for(const d=new Date(desde+"T12:00"),fin=new Date(hasta+"T12:00");d<fin;d.setDate(d.getDate()+1)){
+    bal+=porDia[dateStr(d)]||0; const i=Math.max(0,bal)*r; acum+=i; bal+=i;
+  }
+  return acum;
+}
+const saldo=()=>(+ajustes.saldoBase||0)+netoHastaHoy()+rendSaldoEstimado();
 
 const tasaMes=ea=>Math.pow(1+(+ea||0)/100,1/12)-1;
 const tcNombre=t=>t?(t.nombre?`${t.banco} · ${t.nombre}`:t.banco):"Tarjeta borrada";
@@ -954,7 +971,7 @@ function tcMovNeto(id){return hastaHoy().reduce((s,g)=>g.tarjeta!==id?s:s+(tipoO
 const tcDeuda=t=>(+t.deudaBase||0)+tcMovNeto(t.id);
 function tcPlan(t){
   const P=Math.max(0,tcDeuda(t)), i=tasaMes(t.tasa), n=Math.max(1,+t.meses||12), manejo=+t.manejo||0;
-  if(P<=0) return {P:0,i,n,cuota:0,total:manejo,intereses:0,interesMes:0,manejo};
+  if(P<=0){const m0=(t.manejoSoloDeuda??t.banco==="Nu")?0:manejo; return {P:0,i,n,cuota:0,total:m0,intereses:0,interesMes:0,manejo:m0}}
   const cuota=i>0?P*i/(1-Math.pow(1+i,-n)):P/n;
   return {P,i,n,cuota,total:cuota+manejo,intereses:cuota*n-P,interesMes:P*i,manejo};
 }
@@ -1009,8 +1026,13 @@ function render(){
   $("bAhorro").textContent=`Además tienes ${fmt(ahorrado)} en bolsillos de ahorro · total ${fmt(s+ahorrado)}`;
   // si el saldo está en una cajita que rinde (p. ej. Nu), mostrar cuánto crece
   const st=+ajustes.saldoTasa||0, se=ajustes.saldoEntidad||"";
-  $("bRinde").hidden=!(ajustes.saldoFijado&&(st>0||se)); $("bRend").hidden=!(st>0);
-  if(st>0){
+  $("bRinde").hidden=!(ajustes.saldoFijado&&(st>0||se)); $("bRend").hidden=!(st>0)||rendAuto();
+  if(rendAuto()){
+    const ini=`${y}-${pad(m+1)}-01`, total=rendSaldoEstimado(), antes=ini>ajustes.saldoRendDesde?rendSaldoEstimado(ini):0;
+    const esteMes=y===today.getFullYear()&&m===today.getMonth()?total-antes:0;
+    $("bRinde").textContent=`Está en ${se||"una cajita"} al ${pct(st)} E.A. y crece solo ≈ ${fmt(Math.max(0,s)*(Math.pow(1+st/100,1/365)-1))} al día. `
+      +`Tu saldo ya incluye ≈ ${fmt(total)} de rendimiento estimado${esteMes>0?` (≈ ${fmt(esteMes)} este mes)`:""}.`;
+  } else if(st>0){
     const rendMes=sum(ing.filter(g=>catOf(g).id==="rendimientos"));
     $("bRinde").textContent=`Está en ${se||"una cuenta que rinde"} al ${pct(st)} E.A.: crece ≈ ${fmt(Math.max(0,s)*(Math.pow(1+st/100,1/12)-1))} al mes`+(rendMes?` · este mes registraste ${fmt(rendMes)}`:"");
   } else if(se) $("bRinde").textContent=`Está en ${se}`;
@@ -1091,10 +1113,11 @@ function render(){
   const ae=document.activeElement;
   if(ae!==$("s-moneda")) $("s-moneda").value=ajustes.moneda||"COP";
   if(ae!==$("s-pres")) $("s-pres").value=ajustes.presupuesto||"";
-  if(ae!==$("s-saldo")) $("s-saldo").value=ajustes.saldoFijado?Math.round(s*100)/100:"";
+  if(ae!==$("s-saldo")) $("s-saldo").value=ajustes.saldoFijado?(["COP","CLP","ARS"].includes(ajustes.moneda)?Math.round(s):Math.round(s*100)/100):"";
   if(ae!==$("s-entidad")){ if(!$("s-entidad").options.length) $("s-entidad").innerHTML=`<option value="">No lo sé / varias partes</option>`+ENTIDADES.map(([n,p,t])=>`<option value="${esc(n)}" data-tasa="${t}">${esc(n)}${p?" — "+esc(p):""}</option>`).join("")+`<option>${OTRA_ENT}</option>`;
     const se=ajustes.saldoEntidad||""; if(se&&![...$("s-entidad").options].some(o=>o.value===se)) $("s-entidad").insertAdjacentHTML("beforeend",`<option>${esc(se)}</option>`); $("s-entidad").value=se; }
   if(ae!==$("s-tasa")) $("s-tasa").value=ajustes.saldoTasa?String(ajustes.saldoTasa).replace(".",","):"";
+  if(ae!==$("s-auto")) $("s-auto").checked=ajustes.saldoRendAuto!==false;
 }
 
 function renderTarjetas(){
@@ -1132,7 +1155,7 @@ function renderTarjetas(){
           <span>destina cada mes:</span></div>
         <span class="cuota">${fmt(plan.total)}</span>
         <span class="sub">${plan.manejo?`Incluye ${fmt(plan.manejo)} de cuota de manejo. `:""}En total pagarías ≈ ${fmt(plan.intereses)} en intereses.</span>
-      </div>`:`<div class="tc-plan"><span>No debes nada en esta tarjeta.${t.manejo?` Igual cuenta con ${fmt(+t.manejo)} de cuota de manejo al mes.`:""}</span></div>`}
+      </div>`:`<div class="tc-plan"><span>No debes nada en esta tarjeta.${(t.manejoSoloDeuda??t.banco==="Nu")?" Como no debes, no te cobran cuota de manejo.":t.manejo?` Igual cuenta con ${fmt(+t.manejo)} de cuota de manejo al mes.`:""}</span></div>`}
       <div class="actions">
         <button class="primary sm" data-act="pago">Registrar pago</button>
         <button class="ghost sm" data-act="deuda">Actualizar deuda</button>
@@ -1403,7 +1426,8 @@ function tasaHint(){
     h.textContent=`Búscala en tu extracto o en la app del banco como «Tasa E.A.». El máximo legal en ${USURA.vigencia} es ${pct(USURA.ea)}.`;
   }
 }
-$("t-banco").onchange=tasaHint;
+// Nu no cobra cuota de manejo cuando no hay deuda: se marca sola al elegir Nu (se puede cambiar)
+$("t-banco").onchange=()=>{tasaHint(); $("t-manejo-deuda").checked=$("t-banco").value==="Nu"};
 $("t-tasa").oninput=()=>{tasaAuto=false};
 function resetTcForm(){
   tcEditId=null; tasaAuto=true; $("tcForm").reset(); $("t-meses").value="12"; tasaHint();
@@ -1420,7 +1444,7 @@ $("tcForm").onsubmit=e=>{
   const manejo=parseMonto($("t-manejo").value)||0, cupo=parseMonto($("t-cupo").value)||0;
   const prev=tcEditId?tcById(tcEditId):null;
   const t={id:tcEditId||newId("t"),banco,nombre:$("t-nombre").value.trim(),tasa:Math.round(tasa*100)/100,
-    manejo:Math.max(0,manejo),cupo:Math.max(0,cupo),meses:+$("t-meses").value||12,creado:prev?.creado||Date.now()};
+    manejo:Math.max(0,manejo),manejoSoloDeuda:$("t-manejo-deuda").checked,cupo:Math.max(0,cupo),meses:+$("t-meses").value||12,creado:prev?.creado||Date.now()};
   // la deuda escrita es la de hoy: guardamos la base descontando compras y pagos ya registrados
   t.deudaBase=Math.round((deuda-tcMovNeto(t.id))*100)/100;
   if(!putTarjeta(t)) return;
@@ -1442,7 +1466,7 @@ $("tcList").onclick=e=>{
   if(act==="editar"){
     tcEditId=id; tasaAuto=false;
     elegirBanco(t.banco); $("t-nombre").value=t.nombre||""; $("t-deuda").value=Math.round(Math.max(0,tcDeuda(t))*100)/100;
-    $("t-tasa").value=String(t.tasa).replace(".",","); $("t-manejo").value=t.manejo||""; $("t-cupo").value=t.cupo||""; $("t-meses").value=String(t.meses||12);
+    $("t-tasa").value=String(t.tasa).replace(".",","); $("t-manejo").value=t.manejo||""; $("t-manejo-deuda").checked=t.manejoSoloDeuda??t.banco==="Nu"; $("t-cupo").value=t.cupo||""; $("t-meses").value=String(t.meses||12);
     tasaHint(); $("tcSave").textContent="Guardar cambios"; $("tcAdd").open=true; $("tcAdd").scrollIntoView({behavior:"smooth",block:"start"});
   }
   if(act==="borrar"){
@@ -1521,13 +1545,14 @@ $("saveSettings").onclick=()=>{
   const p=parseMonto($("s-pres").value);
   const st=parseTasa($("s-tasa").value);
   const next={...ajustes,moneda:$("s-moneda").value,presupuesto:p>0?Math.round(p*100)/100:0,
-    saldoEntidad:$("s-entidad").value||"",saldoTasa:st>0&&st<100?Math.round(st*100)/100:0};
+    saldoEntidad:$("s-entidad").value||"",saldoTasa:st>0&&st<100?Math.round(st*100)/100:0,saldoRendAuto:$("s-auto").checked};
   const raw=$("s-saldo").value.trim();
   if(raw){
     const real=parseMonto(raw);
     if(isNaN(real)){toast("Escribe tu saldo como un número, por ejemplo 1.250.000.");$("s-saldo").focus();return}
-    // guardamos la base para que saldo = base + movimientos dé exactamente lo que escribiste
-    next.saldoBase=Math.round((real-netoHastaHoy())*100)/100; next.saldoFijado=true;
+    // guardamos la base para que saldo = base + movimientos dé exactamente lo que escribiste;
+    // el rendimiento estimado que ya iba sumado queda dentro de ese número y se vuelve a contar desde hoy
+    next.saldoBase=Math.round((real-netoHastaHoy())*100)/100; next.saldoFijado=true; next.saldoRendDesde=hoy();
   }
   ajustes=next;
   if(putAjustes()){render();toast("Ajustes guardados")}
@@ -1587,7 +1612,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=30;
+const APP_VERSION=31;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){
