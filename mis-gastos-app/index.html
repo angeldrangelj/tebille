@@ -169,6 +169,22 @@ input:focus,select:focus{border-color:var(--accent);outline:none}
 .bol-saldo{font-family:var(--mono);font-size:1.5rem;font-weight:500}
 .cat.emoji{font-size:1.15rem;padding:4px 10px}
 .balance .ahorro-linea{font-size:.9rem;opacity:.9}
+.bol-donde{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-size:.9rem}
+.bol-crece{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;background:var(--accent-soft);border-radius:10px;padding:12px 14px}
+.bol-crece>div{display:grid;gap:2px;min-width:0}
+.check{display:flex;gap:8px;align-items:center;font-size:.9rem}
+.check input{width:auto}
+/* vista por día */
+.dia-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;align-items:baseline;padding:14px 0 6px;border-top:2px solid var(--line);margin-top:6px}
+.dia-head:first-child{border-top:0;margin-top:0;padding-top:4px}
+.dia-head b{font-family:var(--display)}
+.dia-head .tot{font-family:var(--mono);font-size:.82rem;display:flex;gap:10px;flex-wrap:wrap}
+.seg.seg2{grid-template-columns:1fr 1fr;width:auto}
+.seg button[data-vista][aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px color-mix(in srgb,var(--fg) 15%,transparent)}
+.dias{display:flex;gap:2px;align-items:flex-end;height:56px;margin:2px 0 4px}
+.dias b{flex:1;background:var(--line);border-radius:2px 2px 0 0;min-height:2px}
+.dias b.hoy{background:var(--accent)}
+.dias b.sobre{background:var(--bad)}
 .tiny{display:flex;gap:2px}
 .tiny button{background:none;border:0;color:var(--muted);padding:6px 8px;border-radius:6px;font-size:.8rem}
 .tiny button:hover{color:var(--fg);background:var(--accent-soft)}
@@ -374,7 +390,21 @@ details.addtc form{padding:16px}
   <section class="panel" aria-labelledby="listTitle" data-view="inicio">
     <div class="listhead">
       <h2 id="listTitle">Movimientos</h2>
-      <select id="filter" aria-label="Filtrar movimientos"></select>
+      <div class="actions">
+        <div class="seg seg2" id="vistaMov" role="group" aria-label="Cómo ver los movimientos">
+          <button type="button" data-vista="lista" aria-pressed="true">Lista</button>
+          <button type="button" data-vista="dia" aria-pressed="false">Por día</button>
+        </div>
+        <select id="filter" aria-label="Filtrar movimientos"></select>
+      </div>
+    </div>
+    <div class="tcsum" id="diaResumen" hidden>
+      <div><span class="label">Gastas en promedio</span><span class="mid" id="dProm">—</span><span class="sub" id="dPromSub"></span></div>
+      <div><span class="label" id="dHoyLabel">Puedes gastar hoy</span><span class="mid" id="dHoy">—</span><span class="sub" id="dHoySub"></span></div>
+    </div>
+    <div id="diaBarras" hidden>
+      <span class="label">Gasto de cada día del mes</span>
+      <div class="dias" id="dias"></div>
     </div>
     <div class="list" id="list"></div>
   </section>
@@ -592,6 +622,18 @@ details.addtc form{padding:16px}
             <input id="a-inicial" inputmode="decimal" placeholder="0">
           </div>
         </div>
+        <div class="row2">
+          <div class="field">
+            <label for="a-entidad">¿En qué app o banco tienes este dinero?</label>
+            <select id="a-entidad"></select>
+          </div>
+          <div class="field">
+            <label for="a-tasa">Tasa de rendimiento (% E.A.)</label>
+            <input id="a-tasa" inputmode="decimal" placeholder="Ej. 9,35">
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="a-rinde"> Está en una cajita o bolsillo que genera rendimiento</label>
+        <span class="hint" id="a-tasa-hint"></span>
         <div class="actions">
           <button class="primary" type="submit" id="ahSave">Crear bolsillo</button>
           <button class="ghost" type="button" id="ahCancel">Cancelar</button>
@@ -685,6 +727,37 @@ const CATS={
 const PAGO_CAT={id:"pago",n:"Pago de tarjeta",c:"--c5"};
 const AHORRO_CAT={id:"ahorro",n:"Ahorro",c:"--c6"};
 const BOL_EMOJIS=["🐷","✈️","🏖️","🚗","🏠","🎓","💻","🎁","🩺","💍","🛡️","🎉"];
+// Dónde puede estar guardado el dinero de un bolsillo y cuánto rinde (tasa E.A. publicada; cambia seguido).
+// Fuentes: La República (26 sep 2026), comparadores de oct 2026 y el dato de Nu Cajitas reportado en la app (9,35 %).
+// [nombre, producto, tasa E.A. o 0 si no rinde, nota]
+const ENTIDADES=[
+  ["Nu","Cajitas",9.35,"Rinde todos los días; puedes sacar el dinero cuando quieras."],
+  ["Pibank","Cuenta de ahorro",11,"Cuenta para guardar: solo transferencias, sin retiros en cajero."],
+  ["Lulo Bank","Bolsillos flex",9.5,"10 % para clientes Lulo PRO; bolsillos a 60 y 90 días hasta 10 %."],
+  ["Bancolombia","Inversión virtual",10.4,"Mínimo $500.000 y 30 días; los bolsillos normales de la cuenta no rinden."],
+  ["Nequi","Bolsillos / Colchón",0,"Sirven para separar dinero; casi no generan rendimiento."],
+  ["Daviplata","Bolsillos",8.25,"Hasta 8,25 % según el saldo."],
+  ["Davivienda","Bolsillos",8.25,"Hasta 8,25 % según el saldo."],
+  ["Davibank (antes Scotiabank Colpatria)","Bolsillos",8.25,"Desde $500.000; 8,30 % con cuenta de nómina."],
+  ["Banco AV Villas","Bolsillos con rentabilidad",13,"Hasta 13 %: mínimo $500.000 y cumplir el plazo elegido."],
+  ["Dale!","Ahorro por objetivos",10.5,"Desde $1."],
+  ["Banco de Occidente","Kubo rentable",10.5,""],
+  ["Ban100","Cuenta 100pre",10.5,"Entre 6,5 % y 10,5 % según condiciones; rinde desde el primer peso."],
+  ["Ualá","Cuenta remunerada",10.5,""],
+  ["Banco Falabella","Alcancía digital",10,"Hasta 10 %."],
+  ["Banco Finandina","FlexDigital",10,"Sin monto mínimo."],
+  ["Banco W","Bolsillos",10,"Entre 6,5 % y 10 % según condiciones."],
+  ["Financiera Juriscoop","Bolsillos programados",10,"Hasta 10 % según el plazo."],
+  ["Banco Caja Social","Alcancía digital",9.75,""],
+  ["Banco Popular","Cuenta de ahorro",9.5,""],
+  ["RappiPay","Bolsillos",9,"La Bóveda a 540 días llega a 13,5 %, pero funciona como un CDT."],
+  ["BBVA","Ahorro",8.5,"Hasta 8,5 %; Ahorro Fijo a 360 días hasta 10 %."],
+  ["Itaú","Ahorro",8,"Hasta 8 %."],
+  ["Banco Unión","Ahorro",8,"Hasta 8 %."],
+  ["Efectivo / en casa","",0,"El efectivo no genera rendimiento."],
+];
+const ENT_FECHA="septiembre–octubre de 2026";
+const OTRA_ENT="Otra app o banco";
 // Colores de la app: [id, nombre, color de muestra]
 const TEMAS=[["pino","Pino","#1F6F5C"],["oceano","Océano","#2563A8"],["uva","Uva","#6D4BB0"],["coral","Coral","#C2456A"],["mandarina","Mandarina","#B9541A"],["grafito","Grafito","#3F4A5A"]];
 
@@ -855,7 +928,8 @@ const inMonth=(g,y,m)=>(g.fecha||"").startsWith(monthKey(y,m));
 const sum=a=>a.reduce((s,g)=>s+(+g.monto||0),0);
 // efecto de un movimiento en el dinero que tienes: una compra con tarjeta no lo toca, el pago de la tarjeta sí
 // guardar en un bolsillo saca dinero del disponible; sacarlo del bolsillo lo devuelve
-const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:t==="ahorro"?(g.dir==="sale"?m:-m):(g.tarjeta?0:-m)};
+// el rendimiento que paga la cajita entra directo al bolsillo: no sale de tu saldo
+const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:t==="ahorro"?(g.rendimiento?0:g.dir==="sale"?m:-m):(g.tarjeta?0:-m)};
 const hastaHoy=()=>movs.filter(g=>(g.fecha||"")<=hoy());
 const netoHastaHoy=()=>hastaHoy().reduce((s,g)=>s+efectivo(g),0);
 const saldo=()=>(+ajustes.saldoBase||0)+netoHastaHoy();
@@ -878,6 +952,18 @@ const bolById=id=>bolsillos.find(b=>b.id===id);
 const bolNombre=b=>b?`${b.emoji||"🐷"} ${b.nombre}`:"Bolsillo borrado";
 const bolSaldo=id=>hastaHoy().reduce((s,g)=>tipoOf(g)!=="ahorro"||g.bolsillo!==id?s:s+(g.dir==="sale"?-1:1)*(+g.monto||0),0);
 const totalAhorrado=()=>bolsillos.reduce((s,b)=>s+bolSaldo(b.id),0);
+const rinde=b=>!!(b&&b.rinde&&+b.tasa>0);
+// rendimiento estimado desde que guardaste: cada movimiento crece con interés compuesto diario a la tasa E.A.
+function bolRendEstimado(b){
+  if(!rinde(b)) return 0;
+  const ea=+b.tasa/100, h=new Date(hoy()+"T12:00");
+  return hastaHoy().reduce((s,g)=>{
+    if(tipoOf(g)!=="ahorro"||g.bolsillo!==b.id||g.rendimiento) return s;
+    const dias=Math.max(0,(h-new Date(g.fecha+"T12:00"))/864e5);
+    return s+(g.dir==="sale"?-1:1)*(+g.monto||0)*(Math.pow(1+ea,dias/365)-1);
+  },0);
+}
+const bolRendRegistrado=id=>hastaHoy().reduce((s,g)=>tipoOf(g)==="ahorro"&&g.bolsillo===id&&g.rendimiento?s+(+g.monto||0):s,0);
 // meses completos que faltan hasta la fecha meta (mínimo 1)
 function mesesHasta(fecha){
   if(!fecha) return 0;
@@ -955,18 +1041,29 @@ function render(){
   // lista
   const pasa=g=>!filtro||(filtro.startsWith("t:")?tipoOf(g)===filtro.slice(2):catOf(g).id===filtro.slice(2));
   const rows=mes.filter(pasa).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||"")||(b.creado||0)-(a.creado||0));
-  $("list").innerHTML=rows.length?rows.map(g=>{
+  const itemHtml=g=>{
     const c=catOf(g), d=new Date(g.fecha+"T12:00"), t=tipoOf(g);
-    const titulo=g.descripcion||(t==="pago"?"Pago a "+tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.dir==="sale"?"Sacado de ":"Guardado en ")+bolNombre(bolById(g.bolsillo)):c.n);
-    const metodo=g.tarjeta&&t==="gasto"?"Crédito · "+tcNombre(tcById(g.tarjeta)):(t==="pago"?tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.dir==="sale"?"Vuelve a tu saldo":"Sale de tu saldo"):g.metodo||"");
+    const titulo=g.descripcion||(t==="pago"?"Pago a "+tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.rendimiento?"Rendimiento de ":g.dir==="sale"?"Sacado de ":"Guardado en ")+bolNombre(bolById(g.bolsillo)):c.n);
+    const metodo=g.tarjeta&&t==="gasto"?"Crédito · "+tcNombre(tcById(g.tarjeta)):(t==="pago"?tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.rendimiento?"Lo pagó "+(bolById(g.bolsillo)?.entidad||"la app"):g.dir==="sale"?"Vuelve a tu saldo":"Sale de tu saldo"):g.metodo||"");
     return `<div class="item ${t}">
       <div class="day"><strong>${pad(d.getDate())}</strong>${d.toLocaleDateString("es",{weekday:"short"}).replace(".","")}</div>
       <div class="desc"><div class="t">${esc(titulo)}</div>
         <div class="m"><span><span class="dot" style="background:var(${c.c})"></span> ${c.n}</span><span>${esc(metodo)}</span></div></div>
-      <div class="amt">${t==="ingreso"||(t==="ahorro"&&g.dir==="sale")?"+":"−"}${fmt(+g.monto||0)}</div>
+      <div class="amt">${t==="ingreso"||(t==="ahorro"&&(g.dir==="sale"||g.rendimiento))?"+":"−"}${fmt(+g.monto||0)}</div>
       <div class="tiny">${t==="pago"||t==="ahorro"?"":`<button data-edit="${g.id}">Editar</button>`}<button data-del="${g.id}" class="${confirmId===g.id?"confirm":""}">${confirmId===g.id?"¿Borrar?":"Borrar"}</button></div>
-    </div>`}).join("")
-    :`<div class="empty"><strong>${filtro?"Nada con este filtro":"Aún no hay movimientos en "+monthName(y,m,{month:"long"})}</strong><span>Usa el formulario para registrar un gasto o un ingreso.</span></div>`;
+    </div>`};
+  const vacio=`<div class="empty"><strong>${filtro?"Nada con este filtro":"Aún no hay movimientos en "+monthName(y,m,{month:"long"})}</strong><span>Usa el formulario para registrar un gasto o un ingreso.</span></div>`;
+  if(vistaMov==="dia"&&rows.length){
+    // agrupados por día, con lo que entró y salió cada día
+    const dias=[...new Set(rows.map(g=>g.fecha))];
+    $("list").innerHTML=dias.map(f=>{
+      const del=rows.filter(g=>g.fecha===f), d=new Date(f+"T12:00");
+      const e=sum(del.filter(g=>tipoOf(g)==="ingreso")), s=sum(del.filter(g=>tipoOf(g)==="gasto"));
+      const largo=d.toLocaleDateString("es",{weekday:"long",day:"numeric",month:"long"}).replace(",",""), nombre=f===hoy()?"Hoy":largo.charAt(0).toUpperCase()+largo.slice(1);
+      return `<div class="dia-head"><b>${nombre}</b><span class="tot">${e?`<span class="pos">+${fmt(e)}</span>`:""}${s?`<span class="negc">−${fmt(s)}</span>`:""}${e&&s?`<span>= ${signed(e-s)}</span>`:""}</span></div>`+del.map(itemHtml).join("");
+    }).join("");
+  } else $("list").innerHTML=rows.length?rows.map(itemHtml).join(""):vacio;
+  renderDias(y,m,gas,pres);
 
   renderTarjetas();
   renderBolsillos(s);
@@ -1043,6 +1140,41 @@ function renderTarjetas(){
   syncTarjetaField();
 }
 
+/* ---------- vista por día ---------- */
+let vistaMov=(()=>{try{return localStorage.getItem("tebille.vistaMov")==="dia"?"dia":"lista"}catch{return "lista"}})();
+function renderDias(y,m,gas,pres){
+  const enDia=vistaMov==="dia";
+  document.querySelectorAll("#vistaMov [data-vista]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.vista===vistaMov));
+  $("diaResumen").hidden=!enDia; $("diaBarras").hidden=!enDia;
+  if(!enDia) return;
+  const enMes=new Date(y,m+1,0).getDate(), esActual=y===today.getFullYear()&&m===today.getMonth();
+  const futuro=new Date(y,m,1)>today;
+  const transcurridos=esActual?today.getDate():futuro?0:enMes;
+  const tGas=sum(gas), porDia={};
+  gas.forEach(g=>{const d=+g.fecha.slice(8,10);porDia[d]=(porDia[d]||0)+(+g.monto||0)});
+  $("dProm").textContent=transcurridos?fmt(tGas/transcurridos):"—";
+  $("dPromSub").textContent=transcurridos?`al día en ${transcurridos} día${transcurridos===1?"":"s"} de ${monthName(y,m,{month:"long"})}`:"El mes aún no empieza";
+  // cuánto puedes gastar por día para no pasarte del presupuesto
+  const porDiaPres=pres>0?pres/enMes:0;
+  if(pres>0&&esActual){
+    const antesDeHoy=gas.filter(g=>g.fecha<hoy()).reduce((s,g)=>s+(+g.monto||0),0), hoyG=porDia[today.getDate()]||0;
+    const quedan=enMes-today.getDate()+1, cupoDia=Math.max(0,pres-antesDeHoy)/quedan, resta=cupoDia-hoyG;
+    $("dHoyLabel").textContent="Puedes gastar hoy";
+    $("dHoy").textContent=fmt(Math.max(0,resta)); $("dHoy").className="mid "+(resta<0?"negc":"pos");
+    $("dHoySub").textContent=resta<0?`Hoy te pasaste ${fmt(-resta)} de tu cupo diario (${fmt(cupoDia)})`:`De un cupo de ${fmt(cupoDia)} por día los ${quedan} días que quedan; hoy llevas ${fmt(hoyG)}`;
+  } else if(pres>0){
+    $("dHoyLabel").textContent="Cupo diario del presupuesto"; $("dHoy").className="mid";
+    $("dHoy").textContent=fmt(porDiaPres); $("dHoySub").textContent=`${fmt(pres)} repartidos en ${enMes} días`;
+  } else {
+    $("dHoyLabel").textContent="Puedes gastar hoy"; $("dHoy").className="mid"; $("dHoy").textContent="—";
+    $("dHoySub").textContent="Define un presupuesto mensual en Ajustes para ver tu cupo diario";
+  }
+  const max=Math.max(...Object.values(porDia),porDiaPres,1);
+  $("dias").innerHTML=[...Array(enMes)].map((_,i)=>{const d=i+1,v=porDia[d]||0;
+    return `<b class="${esActual&&d===today.getDate()?"hoy":""} ${porDiaPres&&v>porDiaPres?"sobre":""}" style="height:${v/max*100}%" title="${d}: ${fmt(v)}"></b>`}).join("");
+}
+$("vistaMov").onclick=e=>{const b=e.target.closest("[data-vista]");if(!b)return;vistaMov=b.dataset.vista;try{localStorage.setItem("tebille.vistaMov",vistaMov)}catch{};render()};
+
 /* ---------- bolsillos de ahorro ---------- */
 function renderBolsillos(saldoDisp){
   const lista=bolsillos.map(b=>({b,saldo:bolSaldo(b.id)})).sort((a,c)=>(a.b.creado||0)-(c.b.creado||0));
@@ -1068,17 +1200,23 @@ function renderBolsillos(saldoDisp){
       <span class="bol-saldo">${fmt(saldo)}</span>
       ${meta>0?`<div class="meter"><i style="width:${prog*100}%"></i></div><span class="sub">${falta>0?`Te faltan ${fmt(falta)}`:"Llegaste a tu meta"}</span>`:""}
       ${plan?`<div class="tc-plan"><span>${plan}</span></div>`:""}
+      ${b.entidad?`<div class="bol-donde"><span class="label">Dónde está</span><span>${esc(b.entidad)}${rinde(b)?` · rinde ${pct(+b.tasa)} E.A.`:" · no genera rendimiento"}</span></div>`:""}
+      ${rinde(b)?`<div class="bol-crece">
+        <div><span class="label">Crece aprox.</span><span class="mono">${fmt(Math.max(0,saldo)*(Math.pow(1+b.tasa/100,1/12)-1))} al mes</span><span class="sub">${fmt(Math.max(0,saldo)*b.tasa/100)} en un año</span></div>
+        <div><span class="label">Ganado hasta hoy</span><span class="mono pos">≈ ${fmt(bolRendEstimado(b))}</span><span class="sub">estimado${bolRendRegistrado(b.id)>0?` · registrado: ${fmt(bolRendRegistrado(b.id))}`:""}</span></div>
+      </div>`:""}
       <div class="actions">
         <button class="primary sm" data-bact="entra">Guardar dinero</button>
         <button class="ghost sm" data-bact="sale" ${saldo>0?"":"disabled"}>Sacar dinero</button>
+        ${rinde(b)?`<button class="ghost sm" data-bact="rend">Registrar rendimiento</button>`:""}
         <button class="ghost sm" data-bact="editar">Editar</button>
         <button class="ghost sm" data-bact="borrar">${bolConfirm===b.id?(saldo>0?`¿Borrar? Vuelven ${fmt(saldo)} a tu saldo`:"¿Borrar bolsillo?"):"Borrar"}</button>
       </div>
       ${open?`<form class="tc-inline two" data-bform="${open}">
-        <div class="field"><label for="b-monto-${b.id}">${open==="entra"?"¿Cuánto vas a guardar?":"¿Cuánto vas a sacar?"}</label><input id="b-monto-${b.id}" inputmode="decimal" placeholder="${open==="sale"?Math.round(saldo):(meta>0&&b.fechaMeta&&meses>0?Math.ceil(falta/meses):0)}" required></div>
+        <div class="field"><label for="b-monto-${b.id}">${open==="entra"?"¿Cuánto vas a guardar?":open==="rend"?`¿Cuánto te pagó ${esc(b.entidad||"la app")}?`:"¿Cuánto vas a sacar?"}</label><input id="b-monto-${b.id}" inputmode="decimal" placeholder="${open==="sale"?Math.round(saldo):open==="rend"?Math.round(Math.max(0,saldo)*(Math.pow(1+b.tasa/100,1/12)-1)):(meta>0&&b.fechaMeta&&meses>0?Math.ceil(falta/meses):0)}" required></div>
         <div class="field"><label for="b-fecha-${b.id}">Fecha</label><input id="b-fecha-${b.id}" type="date" value="${hoy()}" required></div>
-        <button class="primary sm" type="submit">${open==="entra"?"Guardar":"Sacar"}</button>
-        <span class="hint" style="grid-column:1/-1">${open==="entra"?"Este dinero sale de tu saldo disponible y queda separado en el bolsillo.":`Vuelve a tu saldo disponible. En el bolsillo hay ${fmt(saldo)}.`}</span>
+        <button class="primary sm" type="submit">${open==="entra"?"Guardar":open==="rend"?"Registrar":"Sacar"}</button>
+        <span class="hint" style="grid-column:1/-1">${open==="entra"?"Este dinero sale de tu saldo disponible y queda separado en el bolsillo.":open==="rend"?"Escribe lo que la app te abonó de verdad (lo ves en su historial). Se suma al bolsillo sin tocar tu saldo.":`Vuelve a tu saldo disponible. En el bolsillo hay ${fmt(saldo)}.`}</span>
       </form>`:""}
     </article>`}).join("")
     :`<div class="empty"><strong>Todavía no tienes bolsillos</strong><span>Crea uno para cada meta (un viaje, una emergencia, un regalo) y ve guardando poco a poco.</span></div>`;
@@ -1089,7 +1227,28 @@ function renderEmojis(){
 function resetBolForm(){
   bolEditId=null; bolEmoji=BOL_EMOJIS[0]; $("ahForm").reset(); renderEmojis();
   $("ahSave").textContent="Crear bolsillo"; $("a-inicial").closest(".field").hidden=false;
+  entAuto=true; elegirEntidad(""); entHint();
 }
+// lista de apps y bancos del formulario; al elegir una se llena sola la tasa (que la persona puede cambiar)
+let entAuto=true;
+function elegirEntidad(nombre){
+  const sel=$("a-entidad");
+  if(!sel.options.length) sel.innerHTML=`<option value="">Elige dónde lo tienes (opcional)</option>`+ENTIDADES.map(([n,p])=>`<option value="${esc(n)}">${esc(n)}${p?" — "+esc(p):""}</option>`).join("")+`<option>${OTRA_ENT}</option>`;
+  if(nombre&&![...sel.options].some(o=>o.value===nombre)) sel.insertAdjacentHTML("beforeend",`<option>${esc(nombre)}</option>`);
+  sel.value=nombre||"";
+}
+function entHint(){
+  const e=ENTIDADES.find(x=>x[0]===$("a-entidad").value), h=$("a-tasa-hint");
+  if(e&&entAuto){ $("a-rinde").checked=e[2]>0; $("a-tasa").value=e[2]>0?String(e[2]).replace(".",","):""; }
+  $("a-tasa").disabled=!$("a-rinde").checked;
+  if(!e){ h.textContent=$("a-entidad").value?"Escribe la tasa que te muestra la app (E.A. = efectivo anual).":"Si tu dinero está en una cajita que paga intereses, elige la app y la tasa se llena sola."; return; }
+  h.textContent=e[2]>0
+    ?`${e[0]}${e[1]?" ("+e[1]+")":""} paga ${pct(e[2])} E.A. según lo publicado en ${ENT_FECHA}. ${e[3]} Las tasas cambian seguido: confirma la tuya en la app y cámbiala si es distinta.`
+    :`${e[0]}: ${e[3]}`;
+}
+$("a-entidad").onchange=()=>{entAuto=true;entHint()};
+$("a-rinde").onchange=()=>{entAuto=false;entHint()};
+$("a-tasa").oninput=()=>{entAuto=false};
 $("ahEmojis").onclick=e=>{const b=e.target.closest("[data-emoji]");if(b){bolEmoji=b.dataset.emoji;renderEmojis()}};
 $("ahCancel").onclick=()=>{resetBolForm();$("ahAdd").open=false};
 $("ahForm").onsubmit=e=>{
@@ -1097,7 +1256,10 @@ $("ahForm").onsubmit=e=>{
   const nombre=$("a-nombre").value.trim(); if(!nombre){toast("Ponle un nombre al bolsillo.");$("a-nombre").focus();return}
   const meta=parseMonto($("a-meta").value), inicial=parseMonto($("a-inicial").value);
   const prev=bolEditId?bolById(bolEditId):null;
-  const b={id:bolEditId||newId("b"),nombre,emoji:bolEmoji,meta:meta>0?Math.round(meta*100)/100:0,fechaMeta:$("a-fecha").value||"",creado:prev?.creado||Date.now()};
+  const tasa=parseTasa($("a-tasa").value), sirve=$("a-rinde").checked;
+  if(sirve&&!(tasa>0&&tasa<100)){toast("Escribe la tasa de rendimiento, por ejemplo 9,35.");$("a-tasa").focus();return}
+  const b={id:bolEditId||newId("b"),nombre,emoji:bolEmoji,meta:meta>0?Math.round(meta*100)/100:0,fechaMeta:$("a-fecha").value||"",
+    entidad:$("a-entidad").value||"",rinde:sirve,tasa:sirve?Math.round(tasa*100)/100:0,creado:prev?.creado||Date.now()};
   if(!putBolsillo(b)) return;
   if(!prev&&inicial>0) putMov({id:newId("a"),tipo:"ahorro",bolsillo:b.id,dir:"entra",monto:Math.round(inicial*100)/100,descripcion:"",categoria:"ahorro",fecha:hoy(),metodo:"",creado:Date.now()});
   toast(prev?"Bolsillo actualizado":`Bolsillo «${nombre}» creado`);
@@ -1106,13 +1268,14 @@ $("ahForm").onsubmit=e=>{
 $("ahList").onclick=e=>{
   const btn=e.target.closest("[data-bact]"); if(!btn) return;
   const id=btn.closest("[data-bol]").dataset.bol, b=bolById(id), act=btn.dataset.bact;
-  if(act==="entra"||act==="sale"){
+  if(act==="entra"||act==="sale"||act==="rend"){
     bolOpen=bolOpen&&bolOpen.id===id&&bolOpen.kind===act?null:{id,kind:act}; render();
     if(bolOpen) $("b-monto-"+id)?.focus();
   }
   if(act==="editar"){
     bolEditId=id; bolEmoji=b.emoji||BOL_EMOJIS[0]; renderEmojis();
     $("a-nombre").value=b.nombre; $("a-meta").value=b.meta||""; $("a-fecha").value=b.fechaMeta||"";
+    elegirEntidad(b.entidad||""); $("a-rinde").checked=!!b.rinde; $("a-tasa").value=b.tasa?String(b.tasa).replace(".",","):""; entAuto=false; entHint();
     $("a-inicial").closest(".field").hidden=true; $("ahSave").textContent="Guardar cambios";
     $("ahAdd").open=true; $("ahAdd").scrollIntoView({behavior:"smooth",block:"start"});
   }
@@ -1131,6 +1294,10 @@ $("ahList").onsubmit=e=>{
   const f=e.target, id=f.closest("[data-bol]").dataset.bol, dir=f.dataset.bform;
   const monto=parseMonto($("b-monto-"+id).value), fecha=$("b-fecha-"+id).value||hoy();
   if(!(monto>0)){toast("Escribe un monto mayor que cero.");return}
+  if(dir==="rend"){
+    if(!putMov({id:newId("a"),tipo:"ahorro",bolsillo:id,dir:"entra",rendimiento:true,monto:Math.round(monto*100)/100,descripcion:"",categoria:"ahorro",fecha,metodo:"",creado:Date.now()})) return;
+    bolOpen=null; render(); toast(`Registraste ${fmt(monto)} de rendimiento en ${bolNombre(bolById(id))}`); return;
+  }
   if(dir==="sale"&&monto>bolSaldo(id)+0.001){toast(`No puedes sacar más de lo que hay (${fmt(bolSaldo(id))}).`);return}
   if(!putMov({id:newId("a"),tipo:"ahorro",bolsillo:id,dir,monto:Math.round(monto*100)/100,descripcion:"",categoria:"ahorro",fecha,metodo:"",creado:Date.now()})) return;
   bolOpen=null; render();
@@ -1387,7 +1554,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=28;
+const APP_VERSION=29;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){

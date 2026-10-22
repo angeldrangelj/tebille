@@ -18,6 +18,8 @@ Tebille es una aplicación web de finanzas personales pensada para Colombia (pes
 - **Saldo actual**: escribes cuánto dinero tienes una vez y la app lo mantiene al día con cada movimiento.
 - **Presupuesto mensual** con avisos al acercarte al límite.
 - **Bolsillos de ahorro**: separa dinero para cada meta (un viaje, una emergencia…), con meta, fecha y cuánto guardar al mes para llegar a tiempo. Lo guardado sale del saldo disponible para no gastarlo sin darte cuenta.
+- **Cajitas que rinden**: cada bolsillo puede indicar en qué app o banco está el dinero (Nu, Pibank, Lulo Bank, Bancolombia, Nequi, Daviplata, RappiPay y más de 20 opciones) y su tasa E.A.; la app estima cuánto crece al mes, al año y cuánto llevas ganado, y permite registrar el rendimiento real.
+- **Vista por día**: movimientos agrupados por día, gasto promedio diario, gráfica del gasto de cada día y cuánto puedes gastar hoy sin pasarte del presupuesto.
 - **Colores y modo oscuro**: elige entre 6 colores (Pino, Océano, Uva, Coral, Mandarina, Grafito) y modo automático, claro u oscuro.
 - **Tarjetas de crédito**: deuda, cupo, cuánto destinar cada mes según el plazo e intereses estimados. La tasa de cada banco se llena sola con **datos oficiales de la Superintendencia Financiera** (datos abiertos, actualizados cada semana) y avisa si una tasa supera la tasa de usura.
 - **Sincronización en la nube** con inicio de sesión (Google o correo): los datos se ven en todos los dispositivos.
