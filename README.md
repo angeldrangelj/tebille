@@ -20,6 +20,13 @@ Tebille es una aplicación web de finanzas personales pensada para Colombia (pes
 - **Bolsillos de ahorro**: separa dinero para cada meta (un viaje, una emergencia…), con meta, fecha y cuánto guardar al mes para llegar a tiempo. Lo guardado sale del saldo disponible para no gastarlo sin darte cuenta.
 - **Cajitas que rinden**: cada bolsillo puede indicar en qué app o banco está el dinero (Nu, Pibank, Lulo Bank, Bancolombia, Nequi, Daviplata, RappiPay y más de 20 opciones) y su tasa E.A.; la app estima cuánto crece al mes, al año y cuánto llevas ganado, y permite registrar el rendimiento real.
 - **Vista por día**: movimientos agrupados por día, gasto promedio diario, gráfica del gasto de cada día y cuánto puedes gastar hoy sin pasarte del presupuesto.
+- **Gastos fijos con avisos**: arriendo, servicios, suscripciones o el sueldo, con su día del mes. Tebille avisa en Inicio antes del día y se marcan como pagados con un toque.
+- **Presupuesto por categoría**: límites mensuales por categoría con avisos al 80 % y al pasarse.
+- **Resumen del mes**: entró, salió, ahorro, rendimiento, gastos fijos pagados, comparación por categoría con el mes anterior y los gastos más grandes; se descarga como archivo para Excel (.csv).
+- **Me deben y debo**: préstamos con amigos y familia, pagos parciales, fecha límite y una calculadora para dividir cuentas.
+- **Categorías propias** con su color, y **foto del recibo** en cada gasto.
+- **Tasa de usura automática** desde los datos abiertos de la Superintendencia Financiera.
+- **Política de privacidad y términos de uso** (`privacidad.html`, `terminos.html`).
 - **Colores y modo oscuro**: elige entre 6 colores (Pino, Océano, Uva, Coral, Mandarina, Grafito) y modo automático, claro u oscuro.
 - **Tarjetas de crédito**: deuda, cupo, cuánto destinar cada mes según el plazo e intereses estimados. La tasa de cada banco se llena sola con **datos oficiales de la Superintendencia Financiera** (datos abiertos, actualizados cada semana) y avisa si una tasa supera la tasa de usura.
 - **Sincronización en la nube** con inicio de sesión (Google o correo): los datos se ven en todos los dispositivos.
@@ -50,10 +57,13 @@ mis-gastos-app/        App web (lo que se publica)
   _headers             Encabezados para Cloudflare (APK, verificación de Android)
   .well-known/         Verificación de la app de Android (assetlinks.json)
   descargas/           APK de Android listo para descargar
+  privacidad.html      Política de privacidad
+  terminos.html        Términos de uso
 functions/api/         Funciones en Cloudflare
   gasto.js             Recibe gastos/ingresos desde el atajo del iPhone
   categorias.js        Lista de categorías para el atajo
   tasas.js             Tasas de tarjetas por banco (Superfinanciera)
+  usura.js             Tasa de usura vigente (Superfinanciera)
 android-app/           Configuración de la app de Android (twa-manifest.json de Bubblewrap)
 scripts/               construir-apk.ps1: construye el APK en Windows
 firestore.rules        Reglas de seguridad de la base de datos
