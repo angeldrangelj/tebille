@@ -39,7 +39,14 @@ export function entenderWallet(p) {
   const comercio = String(p.comercio || "").replace(/\s+/g, " ").trim().slice(0, 80) || "Compra con Apple Pay";
   const tarjeta = norm(p.tarjeta);
   return { tipo: "gasto", monto, descripcion: comercio, categoria: categoriaDe(comercio),
-    credito: /^(no|0|false|debito)$/i.test(String(p.credito || "").trim()) ? false : /^(si|sí|1|true|credito)$/i.test(String(p.credito || "").trim()) || /credit|credito/.test(tarjeta), banco: buscarBanco(tarjeta) };
+    credito: esCredito(p.credito, tarjeta), banco: buscarBanco(tarjeta) };
+}
+// El nombre de la tarjeta en Wallet manda ("Nu Mastercard Debit" es débito aunque el atajo diga "si");
+// si no dice nada, se usa lo que traiga el atajo (si / no / auto).
+function esCredito(param, tarjeta) {
+  if (/debit|debito|\bdeb\b/.test(tarjeta)) return false;
+  if (/credit|credito|\bcred\b/.test(tarjeta)) return true;
+  return /^(si|sí|1|true|credito)$/i.test(String(param || "").trim());
 }
 
 // Atajo "Tebille Apple Pay": la automatización le pasa la compra y el atajo la manda como texto.
@@ -58,7 +65,7 @@ export function entenderBilletera(p) {
   const m = t.match(/(?:\$|cop)\s*[\d.,]*\d|\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?/i) || t.match(/(?<![•*·x])\b\d+(?:[.,]\d{1,2})?\b/i);
   if (!m) return { error: `No encontré el valor de la compra en: «${t.slice(0, 100)}»` };
   const banco = buscarBanco(norm(t));
-  const comercio = t.replace(m[0], " ").replace(/\b(cop|usd)\b|\$/gi, " ").replace(/[•*·]+\s*\d{2,4}/g, " ")
+  const comercio = t.replace(m[0], " ").replace(/\b(cop|usd)\b|\$/gi, " ").replace(/[•*·]+\s*\d{2,4}/g, " ").replace(/\b(mastercard|visa|amex|american express|debit|credit|d[eé]bito|cr[eé]dito)\b/gi, " ")
     .replace(banco ? new RegExp(`(^|\\s)${banco}(?=\\s|$)`, "gi") : /$^/, " ").replace(/\s+/g, " ").trim();
   return entenderWallet({ monto: m[0], comercio, tarjeta: t, credito: p.credito });
 }

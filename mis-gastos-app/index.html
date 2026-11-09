@@ -652,7 +652,7 @@ details.addtc form{padding:16px}
           <code id="atajoApple">Cargando…</code>
           <div class="actions"><button class="primary sm" type="button" data-copy="atajoApple">Copiar atajo de Apple Pay</button></div>
         </div>
-        <span class="hint">Viene listo para tarjeta de <b>crédito</b> (como Nu): la compra se suma a la deuda de la tarjeta. Si lo usas con una de débito, en la línea <code>var EsCredito = "si"</code> cambia «si» por «no». Al pagar te llega una notificación de Tebille con lo que anotó.</span>
+        <span class="hint">Tebille sabe si es débito o crédito por el nombre de la tarjeta en Wallet (por ejemplo «Nu Mastercard Debit»): con débito la compra baja tu saldo y con crédito se suma a la deuda de la tarjeta. Al pagar te llega una notificación de Tebille con lo que anotó.</span>
         <details><summary class="linkbtn">Prefiero hacerlo sin Jellycuts</summary>
           <ol class="sms-pasos">
             <li>En la automatización <b>Transacción</b>, en vez de «Ejecutar atajo», agrega <b>Obtener contenido de URL</b> y pega tu dirección para los mensajes.</li>
@@ -2380,7 +2380,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=36;
+const APP_VERSION=37;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){

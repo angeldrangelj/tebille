@@ -1,14 +1,14 @@
 import Shortcuts
-// Versión del atajo de Apple Pay: 1
+// Versión del atajo de Apple Pay: 2
 // Atajo "Tebille Apple Pay": lo ejecuta la automatización «Transacción» del iPhone cada vez que pagas con Wallet
 // y anota la compra en Tebille sin preguntarte nada.
 // Lo más fácil: en Tebille → Atajo y mensajes del banco → "Copiar atajo de Apple Pay" (ya trae tus datos).
 // Si usas este archivo, cambia PEGA_AQUI_TU_USUARIO y PEGA_AQUI_TU_CLAVE por los que muestra Tebille.
 // No compartas este código: contiene tu clave secreta.
 
-// Si la tarjeta es de crédito (como Nu) deja "si": la compra se suma a la deuda de tu tarjeta.
-// Si es de débito, cambia "si" por "no": la compra baja tu saldo.
-var EsCredito = "si"
+// Tebille sabe si la tarjeta es de crédito o débito por su nombre en Wallet ("Nu Mastercard Debit" = débito).
+// Si el nombre no lo dice, usa esto: "si" = crédito (se suma a la deuda), "no" = débito (baja tu saldo).
+var EsCredito = "auto"
 
 // La automatización le pasa al atajo los datos de la compra (valor, comercio y tarjeta)
 var Compra = "${ShortcutInput}"
