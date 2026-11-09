@@ -32,6 +32,8 @@ Tebille es una aplicación web de finanzas personales pensada para Colombia (pes
 - **Retos de ahorro**: reto de las 52 semanas, una semana sin gastar en una categoría, meta del mes, y rachas de días anotando y días sin gastar.
 - **Cuadrar con mi banco**: escribes cuánto te muestra el banco y la diferencia se anota como «Gastos/Ingresos sin anotar», así el saldo nunca queda descuadrado. Tebille lo sugiere cada semana y el resumen muestra cuánto se te escapó.
 - **Gastos fijos que se anotan solos** el día que tocan (arriendo, suscripciones, sueldo).
+- **Anotar solo al pagar con Apple Pay**: la automatización «Transacción» del iPhone manda el importe, el comercio y la tarjeta a `/api/sms`; las compras con tarjeta de crédito se suman a su deuda.
+- **Cuadrar la deuda de cada tarjeta** con lo que muestra la app del banco: lo que faltaba se anota como «Compras sin anotar».
 - **Anotar solo con los mensajes del banco**: una automatización del iPhone (SMS) o de Android (MacroDroid, SMS o notificaciones) le pasa el aviso del banco a `/api/sms`, que entiende el valor, el comercio, la categoría y si fue con tarjeta de crédito.
 - **Recordatorio de la noche**: si a las 7 p. m. no has anotado nada, Tebille te lo recuerda al abrirla.
 - **Importar movimientos del banco** desde Excel o CSV, con detección de columnas, categoría automática y sin duplicados.

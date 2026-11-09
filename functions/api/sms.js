@@ -2,6 +2,7 @@
 // Recibe el texto de un SMS o notificación del banco (desde una automatización del iPhone o de Android),
 // saca el valor, si es gasto o ingreso, el comercio y la categoría, y lo guarda en Firestore como /api/gasto.
 // Uso: GET /api/sms?u=<usuario>&k=<clave>&texto=<mensaje>   o   POST con los campos u, k y texto (formulario o JSON)
+// Apple Pay (automatización «Transacción» del iPhone): en vez de texto manda monto, comercio, tarjeta y credito=si.
 // Con &probar=1 solo muestra lo que entendió, sin guardar nada.
 
 const PROJECT = "tebille-app-co-e6f6a";
@@ -27,6 +28,20 @@ const REGLAS = [
   [/amazon|mercadolibre|mercado libre|falabella|zara|h&m|alkosto|ktronix|homecenter|shein|temu|tienda/, "Compras"],
 ];
 
+// banco por palabra completa ("Nu" no debe salir de "numero" o "continua")
+const buscarBanco = n => BANCOS.find(b => new RegExp(`(^|[^a-z])${norm(b).replace(/ /g, "\\s+")}([^a-z]|$)`).test(n)) || "";
+const categoriaDe = s => { for (const [re, c] of REGLAS) if (re.test(norm(s))) return c; return "Otros"; };
+
+// Apple Pay: el importe llega como "45.900,00 $", "$45,900.00" o "45900"
+export function entenderWallet(p) {
+  const monto = valor("$" + String(p.monto || "").replace(/[^\d.,]/g, ""));
+  if (!(monto > 0)) return { error: "No llegó el importe de la compra." };
+  const comercio = String(p.comercio || "").replace(/\s+/g, " ").trim().slice(0, 80) || "Compra con Apple Pay";
+  const tarjeta = norm(p.tarjeta);
+  return { tipo: "gasto", monto, descripcion: comercio, categoria: categoriaDe(comercio),
+    credito: /^(si|sí|1|true|credito)$/i.test(String(p.credito || "").trim()) || /credit|credito/.test(tarjeta), banco: buscarBanco(tarjeta) };
+}
+
 // "$45.900,00" · "$ 1.200.000" · "COP 50.000" · "por 45900"
 function valor(s) {
   const m = s.match(/(?:\$|cop|valor de|por)\s*([\d.,]+\d)/i);
@@ -51,7 +66,7 @@ export function entender(msg) {
   const ingreso = /recibiste|te (enviaron|transfirieron|consignaron|llego|llegaron)|abono|consignacion (a|en) tu|deposito|pago de nomina|nomina|te pagaron|reembolso|devolucion/.test(n)
     && !/compraste|compra |pagaste|retiraste|retiro|transferiste|enviaste/.test(n);
   const credito = !ingreso && /t\.? ?cred|tarjeta de credito|tc \*|credito \*|tarj\.? cred/.test(n);
-  const banco = BANCOS.find(b => n.includes(norm(b))) || "";
+  const banco = buscarBanco(n);
 
   // comercio: lo que viene después de " en " / " a " hasta "con", "el", "a las", fecha o fin
   let desc = "";
@@ -80,7 +95,7 @@ async function datos(request) {
 async function manejar(request) {
   const p = await datos(request);
   const uid = String(p.u || "").trim(), clave = String(p.k || "").trim();
-  const r = entender(p.texto);
+  const r = p.monto && !p.texto ? entenderWallet(p) : entender(p.texto);
   if (p.probar) return texto(r.error ? `No se anotaría: ${r.error}` : `Entendí: ${r.tipo} de ${new Intl.NumberFormat("es-CO").format(r.monto)} · ${r.descripcion} · ${r.categoria}${r.credito ? " · tarjeta de crédito" : ""}${r.banco ? " · " + r.banco : ""}`);
   if (!/^[A-Za-z0-9]{10,64}$/.test(uid) || clave.length < 20) return texto("Falta tu usuario o tu clave. Copia la dirección otra vez desde Tebille.", 400);
   if (r.error) return texto(`No se anotó: ${r.error}`, 422);
@@ -88,7 +103,7 @@ async function manejar(request) {
   const fields = {
     tipo: { stringValue: r.tipo }, monto: { doubleValue: r.monto }, categoria: { stringValue: r.categoria },
     descripcion: { stringValue: r.descripcion }, fecha: { stringValue: hoyColombia() },
-    metodo: { stringValue: r.credito ? "Crédito" : "Débito" }, origen: { stringValue: "sms" }, clave: { stringValue: clave },
+    metodo: { stringValue: p.monto && !p.texto ? "Apple Pay" : r.credito ? "Crédito" : "Débito" }, origen: { stringValue: "sms" }, clave: { stringValue: clave },
   };
   if (r.credito) fields.credito = { booleanValue: true };
   if (r.banco) fields.banco = { stringValue: r.banco.slice(0, 30) };

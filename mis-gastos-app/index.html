@@ -394,6 +394,7 @@ details.addtc form{padding:16px}
       <div class="field"><label for="cu-real">¿Cuánto dinero te muestra tu banco hoy?</label><input id="cu-real" inputmode="decimal" placeholder="Ej. 1.250.000"></div>
       <span class="hint">Suma lo disponible en tus cuentas y en efectivo, sin lo que tengas en bolsillos de ahorro. Si no coincide con Tebille, la diferencia se anota como «Gastos sin anotar» o «Ingresos sin anotar» y tu saldo queda igual al del banco.</span>
       <div class="actions"><button class="primary sm" type="submit">Cuadrar</button><button class="ghost sm" type="button" id="cuCancel">Cancelar</button></div>
+      <span class="hint" id="cuTarjetas" hidden>¿Tienes tarjeta de crédito? Cuadra también su deuda en <a href="#tarjetas">Tarjetas → Cuadrar deuda</a>.</span>
     </form>
   </section>
 
@@ -633,12 +634,26 @@ details.addtc form{padding:16px}
       </div>
       <span class="hint">Si cambias la clave, el atajo viejo deja de funcionar y tendrás que pegar el texto nuevo.</span>
       <h3 style="margin:12px 0 0">📩 Anotar solo con los mensajes del banco</h3>
-      <span class="sub">Cada vez que pagas o te llega plata, tu banco te avisa con un SMS o una notificación. Con una automatización, el teléfono le pasa ese aviso a Tebille y el gasto o ingreso se anota solo, con el comercio y la categoría. Las compras con tarjeta de crédito se suman a tu tarjeta.</span>
+      <span class="sub">Cada vez que pagas con Apple Pay, o tu banco te avisa con un SMS o una notificación, una automatización del teléfono se lo pasa a Tebille y el gasto o ingreso se anota solo, con el comercio y la categoría. Las compras con tarjeta de crédito se suman a tu tarjeta.</span>
       <div class="copybox">
         <span class="flabel">Tu dirección para los mensajes (lleva tu clave: no la compartas)</span>
         <code id="smsUrl"></code>
         <div class="actions"><button class="ghost sm" type="button" data-copy="smsUrl">Copiar dirección</button></div>
       </div>
+      <details class="addtc" open><summary>iPhone: anotar solo al pagar con Apple Pay (Wallet) ⭐</summary>
+        <span class="sub">Funciona con cualquier tarjeta que tengas en Wallet (Nu, Bancolombia, Davivienda…), aunque el banco no mande SMS. Se anota cuando pagas acercando el iPhone o el reloj; no con la tarjeta física ni en compras por internet con el número.</span>
+        <ol class="sms-pasos">
+          <li>Abre <b>Atajos</b> → pestaña <b>Automatización</b> → <b>+</b> o <b>Nueva automatización</b>.</li>
+          <li>Elige <b>Transacción</b>. En <b>Tarjetas</b> marca las de Wallet que quieras (por ejemplo tu Nu). Deja «Cualquier comercio».</li>
+          <li>Marca <b>Ejecutar inmediatamente</b> → <b>Siguiente</b> → <b>Nueva automatización en blanco</b>.</li>
+          <li>Agrega <b>Obtener contenido de URL</b> y pega tu dirección de arriba.</li>
+          <li>Toca la flecha <b>›</b>: <b>Método</b> = POST, <b>Cuerpo de la solicitud</b> = Formulario, y agrega estos campos de <b>Texto</b>:
+            <br><code>monto</code> → variable <b>Importe</b> · <code>comercio</code> → variable <b>Comercio</b> · <code>tarjeta</code> → variable <b>Tarjeta o pase</b> (o escribe «Nu»).
+            <br>Si es tarjeta de <b>crédito</b> (como la de Nu), agrega también <code>credito</code> → <code>si</code>, para que se sume a la deuda de tu tarjeta en vez de bajar tu saldo.</li>
+          <li>Opcional: <b>Mostrar notificación</b> con «Contenido de URL» para ver qué se anotó.</li>
+        </ol>
+        <span class="hint">Si tienes tarjeta de débito y de crédito en Wallet, crea una automatización para cada una (solo la de crédito lleva <code>credito = si</code>).</span>
+      </details>
       <details class="addtc"><summary>Cómo hacerlo en iPhone (con SMS del banco)</summary>
         <ol class="sms-pasos">
           <li>Abre la app <b>Atajos</b> → pestaña <b>Automatización</b> → <b>+</b> o <b>Nueva automatización</b>.</li>
@@ -660,6 +675,7 @@ details.addtc form{padding:16px}
         </ol>
         <span class="hint">En Android sí funciona con las notificaciones de las apps de los bancos.</span>
       </details>
+      <span class="hint">💡 Para lo que no se anota solo (efectivo, tarjeta física): pon tu atajo de Tebille en <b>Ajustes → Accesibilidad → Tocar → Tocar atrás → Doble toque</b>, y anotas con dos golpecitos en la parte de atrás del iPhone.</span>
       <div class="field">
         <label for="smsPrueba">Prueba con un mensaje de tu banco (no se guarda)</label>
         <textarea id="smsPrueba" rows="3" placeholder="Pega aquí un SMS o notificación, ej.: Bancolombia: Compraste $45.900 en RAPPI con tu T.Deb *1234"></textarea>
@@ -1575,7 +1591,7 @@ function renderTarjetas(){
       </div>`:`<div class="tc-plan"><span>No debes nada en esta tarjeta.${(t.manejoSoloDeuda??t.banco==="Nu")?" Como no debes, no te cobran cuota de manejo.":t.manejo?` Igual cuenta con ${fmt(+t.manejo)} de cuota de manejo al mes.`:""}</span></div>`}
       <div class="actions">
         <button class="primary sm" data-act="pago">Registrar pago</button>
-        <button class="ghost sm" data-act="deuda">Actualizar deuda</button>
+        <button class="ghost sm" data-act="deuda">Cuadrar deuda</button>
         <button class="ghost sm" data-act="editar">Editar</button>
         <button class="ghost sm" data-act="borrar">${tcConfirm===t.id?"¿Borrar tarjeta?":"Borrar"}</button>
       </div>
@@ -1586,10 +1602,10 @@ function renderTarjetas(){
         <span class="hint" style="grid-column:1/-1">El pago baja tu saldo y la deuda de la tarjeta.</span>
       </form>`:""}
       ${open==="deuda"?`<form class="tc-inline" data-form="deuda">
-        <div class="field"><label for="d-monto-${t.id}">¿Cuánto debes hoy según tu extracto?</label><input id="d-monto-${t.id}" inputmode="decimal" value="${Math.round(Math.max(0,deuda)*100)/100}" required></div>
-        <button class="primary sm" type="submit">Actualizar</button>
+        <div class="field"><label for="d-monto-${t.id}">¿Cuánto debes hoy según la app de ${esc(t.banco)}?</label><input id="d-monto-${t.id}" inputmode="decimal" placeholder="Tebille cree que ${fmt(Math.max(0,deuda))}" required></div>
+        <button class="primary sm" type="submit">Cuadrar</button>
         <button class="ghost sm" type="button" data-act="cerrar">Cancelar</button>
-        <span class="hint" style="grid-column:1/-1">Úsalo cuando llegue el extracto: así se suman los intereses y cobros que el banco ya aplicó.</span>
+        <span class="hint" style="grid-column:1/-1">Mira la deuda total en la app del banco. Si debes más de lo anotado, la diferencia se anota como «Compras sin anotar» en esta tarjeta (no toca tu saldo). Si debes menos, se corrige la deuda; si fue un pago que no anotaste, mejor usa «Registrar pago» para que también baje tu saldo.</span>
       </form>`:""}
     </article>`}).join("")
     :`<div class="empty"><strong>No tienes tarjetas registradas</strong><span>Agrega tu tarjeta: eliges el banco, escribes cuánto debes y la tasa, y te digo cuánto destinar cada mes para pagarla.</span></div>`;
@@ -2211,7 +2227,12 @@ $("tcList").onsubmit=e=>{
   if(f.dataset.form==="deuda"){
     const real=parseMonto($("d-monto-"+id).value);
     if(isNaN(real)||real<0){toast("Escribe cuánto debes, por ejemplo 1.200.000.");return}
-    if(putTarjeta({...t,deudaBase:Math.round((real-tcMovNeto(id))*100)/100})){tcOpen=null;render();toast("Deuda actualizada")}
+    const dif=Math.round((real-tcDeuda(t))*100)/100;
+    if(Math.abs(dif)<1){tcOpen=null;render();toast("¡Perfecto! La deuda ya cuadra con tu banco ✓");return}
+    // debes más: compras (o intereses) que no anotaste; quedan como gasto de la tarjeta para verlas en el mes
+    const ok=dif>0?putMov({id:newId("g"),tipo:"gasto",tarjeta:id,monto:dif,descripcion:"Compras sin anotar (cuadre)",categoria:"otros",fecha:hoy(),metodo:"Crédito",cuadre:true,creado:Date.now()})
+      :putTarjeta({...t,deudaBase:Math.round(((+t.deudaBase||0)+dif)*100)/100});
+    if(ok){tcOpen=null;render();toast(dif>0?`Cuadrado: faltaban ${fmt(dif)} en compras de ${tcNombre(t)}.`:`Listo: la deuda bajó ${fmt(-dif)} y ya cuadra con tu banco.`)}
   }
 };
 
@@ -2353,7 +2374,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=34;
+const APP_VERSION=35;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){
@@ -2474,7 +2495,7 @@ document.addEventListener("click",async e=>{
 });
 
 /* ---------- cuadrar con el banco ---------- */
-function abrirCuadre(){location.hash="inicio";$("cuadreForm").hidden=false;$("cu-real").value="";setTimeout(()=>{$("balance").scrollIntoView({behavior:"smooth",block:"start"});$("cu-real").focus()},80)}
+function abrirCuadre(){location.hash="inicio";$("cuadreForm").hidden=false;$("cuTarjetas").hidden=!tarjetas.length;$("cu-real").value="";setTimeout(()=>{$("balance").scrollIntoView({behavior:"smooth",block:"start"});$("cu-real").focus()},80)}
 $("bCuadrar").onclick=()=>{if($("cuadreForm").hidden)abrirCuadre();else $("cuadreForm").hidden=true};
 $("cuCancel").onclick=()=>{$("cuadreForm").hidden=true};
 $("cuadreForm").onsubmit=e=>{
