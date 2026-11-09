@@ -30,6 +30,9 @@ Tebille es una aplicación web de finanzas personales pensada para Colombia (pes
 - **Patrimonio neto**: lo que tienes (saldo, bolsillos, lo que te deben) menos lo que debes, con su historia mes a mes.
 - **Plan para salir de deudas**: compara los métodos avalancha y bola de nieve con lo que puedes pagar al mes (meses hasta quedar libre e intereses).
 - **Retos de ahorro**: reto de las 52 semanas, una semana sin gastar en una categoría, meta del mes, y rachas de días anotando y días sin gastar.
+- **Cuadrar con mi banco**: escribes cuánto te muestra el banco y la diferencia se anota como «Gastos/Ingresos sin anotar», así el saldo nunca queda descuadrado. Tebille lo sugiere cada semana y el resumen muestra cuánto se te escapó.
+- **Gastos fijos que se anotan solos** el día que tocan (arriendo, suscripciones, sueldo).
+- **Anotar solo con los mensajes del banco**: una automatización del iPhone (SMS) o de Android (MacroDroid, SMS o notificaciones) le pasa el aviso del banco a `/api/sms`, que entiende el valor, el comercio, la categoría y si fue con tarjeta de crédito.
 - **Recordatorio de la noche**: si a las 7 p. m. no has anotado nada, Tebille te lo recuerda al abrirla.
 - **Importar movimientos del banco** desde Excel o CSV, con detección de columnas, categoría automática y sin duplicados.
 - **Bloqueo con PIN** y, si quieres, con **huella o Face ID** (solo en ese dispositivo).
@@ -72,6 +75,7 @@ functions/api/         Funciones en Cloudflare
   categorias.js        Lista de categorías para el atajo
   tasas.js             Tasas de tarjetas por banco (Superfinanciera)
   usura.js             Tasa de usura vigente (Superfinanciera)
+  sms.js               Lee SMS y notificaciones del banco y anota el movimiento
 android-app/           Configuración de la app de Android (twa-manifest.json de Bubblewrap)
 scripts/               construir-apk.ps1: construye el APK en Windows
 firestore.rules        Reglas de seguridad de la base de datos

@@ -84,6 +84,10 @@ header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-betw
 .balance .big{font-size:2.4rem}
 .balance .sub{color:inherit;opacity:.9}
 .balance.neg{background:var(--bad)}
+.cuadre{display:grid;gap:8px;background:var(--surface);color:var(--fg);border-radius:10px;padding:12px 14px;margin-top:6px}
+.cuadre .hint{color:var(--muted)}
+.sms-pasos{margin:4px 0 0;padding-left:1.3em;display:grid;gap:4px;font-size:.92rem}
+.sms-pasos code{display:inline;padding:1px 5px}
 .balance .reserve{margin-top:6px;padding-top:10px;border-top:1px solid color-mix(in srgb,currentColor 30%,transparent);display:flex;flex-wrap:wrap;gap:4px 18px;font-size:.9rem}
 .balance .reserve b{font-family:var(--mono);font-weight:500}
 .balance button{justify-self:start;margin-top:6px;background:none;border:1px solid currentColor;color:inherit;border-radius:8px;padding:6px 12px;font-size:.85rem;opacity:.9}
@@ -384,7 +388,13 @@ details.addtc form{padding:16px}
     <div class="actions">
       <button type="button" id="bAjustar">Ajustar saldo</button>
       <button type="button" id="bRend" hidden>Registrar rendimiento</button>
+      <button type="button" id="bCuadrar" hidden>Cuadrar con mi banco</button>
     </div>
+    <form class="cuadre" id="cuadreForm" autocomplete="off" hidden>
+      <div class="field"><label for="cu-real">¿Cuánto dinero te muestra tu banco hoy?</label><input id="cu-real" inputmode="decimal" placeholder="Ej. 1.250.000"></div>
+      <span class="hint">Suma lo disponible en tus cuentas y en efectivo, sin lo que tengas en bolsillos de ahorro. Si no coincide con Tebille, la diferencia se anota como «Gastos sin anotar» o «Ingresos sin anotar» y tu saldo queda igual al del banco.</span>
+      <div class="actions"><button class="primary sm" type="submit">Cuadrar</button><button class="ghost sm" type="button" id="cuCancel">Cancelar</button></div>
+    </form>
   </section>
 
   <section class="proy" id="proy" data-view="inicio" aria-label="Así terminarías el mes" hidden>
@@ -622,6 +632,40 @@ details.addtc form{padding:16px}
         <div class="actions"><button class="ghost sm" type="button" data-copy="atajoJson">Copiar texto</button></div>
       </div>
       <span class="hint">Si cambias la clave, el atajo viejo deja de funcionar y tendrás que pegar el texto nuevo.</span>
+      <h3 style="margin:12px 0 0">📩 Anotar solo con los mensajes del banco</h3>
+      <span class="sub">Cada vez que pagas o te llega plata, tu banco te avisa con un SMS o una notificación. Con una automatización, el teléfono le pasa ese aviso a Tebille y el gasto o ingreso se anota solo, con el comercio y la categoría. Las compras con tarjeta de crédito se suman a tu tarjeta.</span>
+      <div class="copybox">
+        <span class="flabel">Tu dirección para los mensajes (lleva tu clave: no la compartas)</span>
+        <code id="smsUrl"></code>
+        <div class="actions"><button class="ghost sm" type="button" data-copy="smsUrl">Copiar dirección</button></div>
+      </div>
+      <details class="addtc"><summary>Cómo hacerlo en iPhone (con SMS del banco)</summary>
+        <ol class="sms-pasos">
+          <li>Abre la app <b>Atajos</b> → pestaña <b>Automatización</b> → <b>+</b> o <b>Nueva automatización</b>.</li>
+          <li>Elige <b>Mensaje</b>. En «El mensaje contiene» escribe <code>$</code>. Si quieres, en «Remitente» elige el número de tu banco.</li>
+          <li>Marca <b>Ejecutar inmediatamente</b> y toca <b>Siguiente</b> → <b>Nueva automatización en blanco</b>.</li>
+          <li>Agrega la acción <b>Obtener contenido de URL</b> y pega tu dirección de arriba.</li>
+          <li>Toca la flecha <b>›</b> de esa acción: <b>Método</b> = POST, <b>Cuerpo de la solicitud</b> = Formulario. Agrega un campo de <b>Texto</b> con clave <code>texto</code> y como valor la variable <b>Mensaje</b> (el contenido del mensaje).</li>
+          <li>Opcional: agrega <b>Mostrar notificación</b> con «Contenido de URL» para ver qué anotó.</li>
+        </ol>
+        <span class="hint">Solo sirve con bancos que avisan por SMS. Atajos no puede leer las notificaciones de las apps de los bancos; si tu banco solo avisa por notificación, actívale los avisos por SMS en su app.</span>
+      </details>
+      <details class="addtc"><summary>Cómo hacerlo en Android (SMS o notificaciones)</summary>
+        <ol class="sms-pasos">
+          <li>Instala <b>MacroDroid</b> (gratis en Google Play) y toca <b>Agregar macro</b>.</li>
+          <li>Disparador: <b>Notificación → Notificación recibida</b> y elige la app de tu banco (Bancolombia, Nequi, Nu…), o <b>SMS recibido</b> si te avisa por mensaje. Pon que el texto contenga <code>$</code>.</li>
+          <li>Acción: <b>Conectividad → Solicitud HTTP</b>. Método <b>POST</b>, URL tu dirección de arriba.</li>
+          <li>En el cuerpo, agrega el parámetro <code>texto</code> y como valor elige el texto de la notificación (o del SMS) con el botón de texto mágico.</li>
+          <li>Guarda la macro y dale a MacroDroid el permiso de leer notificaciones.</li>
+        </ol>
+        <span class="hint">En Android sí funciona con las notificaciones de las apps de los bancos.</span>
+      </details>
+      <div class="field">
+        <label for="smsPrueba">Prueba con un mensaje de tu banco (no se guarda)</label>
+        <textarea id="smsPrueba" rows="3" placeholder="Pega aquí un SMS o notificación, ej.: Bancolombia: Compraste $45.900 en RAPPI con tu T.Deb *1234"></textarea>
+        <div class="actions"><button class="ghost sm" type="button" id="smsProbar">Ver qué entendería</button></div>
+        <span class="hint" id="smsRes"></span>
+      </div>
     </div>
   </section>
 
@@ -764,10 +808,11 @@ details.addtc form{padding:16px}
           </select></div>
         </div>
         <div class="field"><label for="fj-metodo">Pagado con</label><select id="fj-metodo"><option>Débito</option><option>Transferencia</option><option>Efectivo</option><option>Crédito</option></select></div>
+        <label class="check"><input type="checkbox" id="fj-auto" checked> Anotarlo solo el día que toca (sin tener que tocar «Pagar»)</label>
         <div class="actions"><button class="primary" type="submit" id="fjSave">Guardar</button><button class="ghost" type="button" id="fjCancel">Cancelar</button></div>
       </form>
     </details>
-    <span class="hint">Cuando se acerque el día, Tebille te avisa en Inicio. Al tocar «Pagar» se anota el gasto del mes con un toque. Los avisos aparecen al abrir la app: no llegan como notificación al teléfono.</span>
+    <span class="hint">Los que marcas para «anotar solo» aparecen en tus movimientos el día que tocan. Los demás te avisan en Inicio y se anotan con un toque en «Pagar». Los avisos aparecen al abrir la app: no llegan como notificación al teléfono.</span>
   </section>
 
   <section class="panel" aria-labelledby="dTitle" id="deudasPanel" data-view="deudas">
@@ -998,7 +1043,7 @@ details.addtc form{padding:16px}
   <a href="#patrimonio" data-nav="patrimonio">Patrimonio neto<span>Lo que tienes menos lo que debes</span></a>
   <a href="#retos" data-nav="retos">Retos de ahorro<span>Rachas y retos para ahorrar</span></a>
   <a href="#cuenta" data-nav="cuenta">Cuenta y nube<span>Inicia sesión y sincroniza</span></a>
-  <a href="#atajo" data-nav="atajo" id="navAtajo" hidden>Atajo del iPhone<span>Anota desde el Centro de control</span></a>
+  <a href="#atajo" data-nav="atajo" id="navAtajo" hidden>Atajo y mensajes del banco<span>Anota sin abrir la app o automáticamente</span></a>
   <a href="#ajustes" data-nav="ajustes">Ajustes<span>Saldo, moneda, presupuesto y copias</span></a>
   <a href="#iphone" data-nav="iphone">Instalar en iPhone<span>Agrégala a tu pantalla de inicio</span></a>
   <a href="#acerca" data-nav="acerca">Acerca de Tebille<span>Creador y contacto</span></a>
@@ -1237,14 +1282,14 @@ async function subirTodo(lista,col){
 
 function pararNube(){unsubs.forEach(u=>u());unsubs=[]}
 function escucharNube(){
-  pararNube(); migrado=false;
+  pararNube(); migrado=false; nubeLista=false;
   const F=fb.F, listo={m:false,t:false,b:false,a:false,aExiste:false};
   const errSnap=e=>{console.warn(e);mostrarErrorNube("No se pudieron leer tus datos de la nube. Revisa tu conexión.")};
   const tras=()=>{render(); if(listo.m&&listo.t&&listo.b&&listo.a) migrarLocal(listo.aExiste)};
   unsubs.push(F.onSnapshot(ucol("bolsillos"),{includeMetadataChanges:true},s=>{bolsillos=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.b=true;tras()},errSnap));
   unsubs.push(F.onSnapshot(ucol("fijos"),s=>{fijos=s.docs.map(d=>({...d.data(),id:d.id}));render()},errSnap));
   unsubs.push(F.onSnapshot(ucol("deudas"),s=>{deudas=s.docs.map(d=>({...d.data(),id:d.id}));render()},errSnap));
-  unsubs.push(F.onSnapshot(ucol("movs"),{includeMetadataChanges:true},s=>{movs=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.m=true;tras()},errSnap));
+  unsubs.push(F.onSnapshot(ucol("movs"),{includeMetadataChanges:true},s=>{movs=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache){listo.m=true;nubeLista=true}tras()},errSnap));
   unsubs.push(F.onSnapshot(ucol("tarjetas"),{includeMetadataChanges:true},s=>{tarjetas=s.docs.map(d=>({...d.data(),id:d.id}));if(!s.metadata.fromCache)listo.t=true;tras()},errSnap));
   unsubs.push(F.onSnapshot(uref("config","ajustes"),{includeMetadataChanges:true},s=>{ajustes={...AJ_DEF,...(s.exists()?s.data():{})};if(!s.metadata.fromCache){listo.a=true;listo.aExiste=s.exists()}tras()},errSnap));
   unsubs.push(F.onSnapshot(uref("privado","atajo"),s=>{claveAtajo=s.exists()?s.data().clave:null;renderAtajo()},()=>{}));
@@ -1307,7 +1352,7 @@ const sum=a=>a.reduce((s,g)=>s+(+g.monto||0),0);
 // guardar en un bolsillo saca dinero del disponible; sacarlo del bolsillo lo devuelve
 // el rendimiento que paga la cajita entra directo al bolsillo: no sale de tu saldo
 // un préstamo mueve el saldo según su dirección: prestar o pagar una deuda sale; recibir entra
-const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:t==="deuda"?(g.dir==="entra"?m:-m):t==="ahorro"?(g.rendimiento?0:g.dir==="sale"?m:-m):(g.tarjeta?0:-m)};
+const efectivo=g=>{const m=+g.monto||0,t=tipoOf(g);return t==="ingreso"?m:t==="pago"?-m:t==="deuda"?(g.dir==="entra"?m:-m):t==="ahorro"?(g.rendimiento?0:g.dir==="sale"?m:-m):(g.tarjeta||g.credito?0:-m)};
 const hastaHoy=()=>movs.filter(g=>(g.fecha||"")<=hoy());
 const netoHastaHoy=()=>hastaHoy().reduce((s,g)=>s+efectivo(g),0);
 // Rendimiento estimado del saldo cuando está en una cajita (p. ej. Nu): cada día, lo que tienes ese día
@@ -1367,7 +1412,7 @@ function mesesHasta(fecha){
 
 /* ---------- render ---------- */
 function render(){
-  syncCats();
+  syncCats(); autoFijos(); asignarCreditos();
   const {y,m}=ym;
   const ml=monthName(y,m); $("monthLabel").textContent=ml.charAt(0).toUpperCase()+ml.slice(1);
   const mes=movs.filter(g=>inMonth(g,y,m));
@@ -1383,6 +1428,7 @@ function render(){
     ?"Escribe cuánto dinero tienes hoy para empezar con tu saldo real."
     :(s<0?"Has gastado más de lo que tenías.":"Tu dinero, con los movimientos hasta hoy.")+(futuros?` ${futuros} movimiento${futuros>1?"s":""} con fecha futura aún no cuenta${futuros>1?"n":""}.`:"");
   $("bAjustar").textContent=ajustes.saldoFijado?"Ajustar saldo":"Escribir mi saldo";
+  $("bCuadrar").hidden=!ajustes.saldoFijado;
   const planes=tarjetas.map(tcPlan), reservar=planes.reduce((a,p)=>a+(p.P>0?p.total:0),0);
   $("bReserve").hidden=!(ajustes.saldoFijado&&reservar>0);
   if(reservar>0) $("bReserve").innerHTML=`<span>Separa para tarjetas este mes: <b>${fmt(reservar)}</b></span><span>Te queda libre: <b>${fmt(s-reservar)}</b></span>`;
@@ -1457,7 +1503,7 @@ function render(){
     const metodo=t==="deuda"?(g.dir==="entra"?"Entra a tu saldo":"Sale de tu saldo"):g.tarjeta&&t==="gasto"?"Crédito · "+tcNombre(tcById(g.tarjeta)):(t==="pago"?tcNombre(tcById(g.tarjeta)):t==="ahorro"?(g.rendimiento?"Lo pagó "+(bolById(g.bolsillo)?.entidad||"la app"):g.dir==="sale"?"Vuelve a tu saldo":"Sale de tu saldo"):g.metodo||"");
     return `<div class="item ${t}">
       <div class="day"><strong>${pad(d.getDate())}</strong>${d.toLocaleDateString("es",{weekday:"short"}).replace(".","")}</div>
-      <div class="desc"><div class="t">${esc(titulo)}${g.recibo?` <button class="recibo-btn" data-recibo="${g.id}" aria-label="Ver foto del recibo">📎</button>`:""}${g.fijo?` <span class="pill">Fijo</span>`:""}</div>
+      <div class="desc"><div class="t">${esc(titulo)}${g.recibo?` <button class="recibo-btn" data-recibo="${g.id}" aria-label="Ver foto del recibo">📎</button>`:""}${g.fijo?` <span class="pill">Fijo</span>`:""}${g.cuadre?` <span class="pill warn">Cuadre</span>`:""}${g.origen==="sms"?` <span class="pill">📩 Banco</span>`:""}</div>
         <div class="m"><span><span class="dot" style="background:var(${c.c})"></span> ${c.n}</span><span>${esc(metodo)}</span></div></div>
       <div class="amt">${t==="ingreso"||(t==="deuda"&&g.dir==="entra")||(t==="ahorro"&&(g.dir==="sale"||g.rendimiento))?"+":"−"}${fmt(+g.monto||0)}</div>
       <div class="tiny">${t==="pago"||t==="ahorro"||t==="deuda"?"":`<button data-edit="${g.id}">Editar</button>`}<button data-del="${g.id}" class="${confirmId===g.id?"confirm":""}">${confirmId===g.id?"¿Borrar?":"Borrar"}</button></div>
@@ -1578,7 +1624,7 @@ function renderFijos(){
       :falta===0?`<span class="pill warn">${ing?"Llega":"Vence"} hoy</span>`
       :`<span class="pill ${falta<=(+f.aviso||0)?"warn":""}">${ing?"Llega":"Vence"} en ${falta} día${falta===1?"":"s"}</span>`;
     return `<article class="tc ${mv?"pagado":""}" data-fj="${f.id}">
-      <div class="tc-top"><div class="tc-name"><div class="n">${esc(f.nombre)}</div><div class="sub">Día ${+f.dia||1} de cada mes · ${esc(c?.n||"Otros")} · ${esc(f.metodo||"")}</div></div>${estado}</div>
+      <div class="tc-top"><div class="tc-name"><div class="n">${esc(f.nombre)}</div><div class="sub">Día ${+f.dia||1} de cada mes · ${esc(c?.n||"Otros")} · ${esc(f.metodo||"")}${f.auto?" · se anota solo":""}</div></div>${estado}</div>
       <span class="mid">${ing?"+":""}${fmt(+f.monto||0)}</span>
       <div class="actions">
         ${mv?`<button class="ghost sm" data-fjact="deshacer">Deshacer</button>`:`<button class="primary sm" data-fjact="pagar">${ing?"Ya lo recibí":"Pagar"}</button>`}
@@ -1610,17 +1656,17 @@ $("fjForm").onsubmit=e=>{
   if(!nombre){toast("Ponle un nombre, por ejemplo «Arriendo».");return}
   if(!(monto>0)){toast("Escribe el monto.");$("fj-monto").focus();return}
   const prev=fjEditId?fijos.find(f=>f.id===fjEditId):null;
-  putFijo({id:fjEditId||newId("f"),tipo:fjTipoSel,nombre,monto:Math.round(monto*100)/100,dia:+$("fj-dia").value,categoria:$("fj-cat").value,metodo:$("fj-metodo").value,aviso:+$("fj-aviso").value,creado:prev?.creado||Date.now()});
+  putFijo({id:fjEditId||newId("f"),tipo:fjTipoSel,nombre,monto:Math.round(monto*100)/100,dia:+$("fj-dia").value,categoria:$("fj-cat").value,metodo:$("fj-metodo").value,aviso:+$("fj-aviso").value,auto:$("fj-auto").checked,saltado:prev?.saltado||"",creado:prev?.creado||Date.now()});
   toast(prev?"Gasto fijo actualizado":`«${nombre}» agregado`); resetFjForm(); $("fjAdd").open=false; render();
 };
 $("fjList").onclick=e=>{
   const b=e.target.closest("[data-fjact]"); if(!b) return;
   const id=b.closest("[data-fj]").dataset.fj, f=fijos.find(x=>x.id===id), act=b.dataset.fjact;
   if(act==="pagar") pagarFijo(id);
-  if(act==="deshacer"){const mv=fjMov(f,today.getFullYear(),today.getMonth()); if(mv){delMov(mv.id);render();toast("Listo, quedó como pendiente")}}
+  if(act==="deshacer"){const mv=fjMov(f,today.getFullYear(),today.getMonth()); if(mv){delMov(mv.id); if(f.auto) putFijo({...f,saltado:monthKey(today.getFullYear(),today.getMonth())}); render();toast(f.auto?"Listo: este mes no se volverá a anotar solo":"Listo, quedó como pendiente")}}
   if(act==="editar"){
     fjEditId=id; setFjTipo(f.tipo==="ingreso"?"ingreso":"gasto"); fjCatsOpciones(fjTipoSel,f.categoria);
-    $("fj-nombre").value=f.nombre; $("fj-monto").value=f.monto; $("fj-dia").value=String(f.dia||1); $("fj-metodo").value=f.metodo||"Débito"; $("fj-aviso").value=String(f.aviso??3);
+    $("fj-nombre").value=f.nombre; $("fj-monto").value=f.monto; $("fj-dia").value=String(f.dia||1); $("fj-metodo").value=f.metodo||"Débito"; $("fj-aviso").value=String(f.aviso??3); $("fj-auto").checked=!!f.auto;
     $("fjSave").textContent="Guardar cambios"; $("fjAdd").open=true; $("fjAdd").scrollIntoView({behavior:"smooth",block:"start"});
   }
   if(act==="borrar"){
@@ -1652,6 +1698,10 @@ function renderAvisos(){
     const lim=+lims[c.id]||0; if(!lim) return; const t=sum(mesG.filter(g=>catOf(g).id===c.id));
     if(t>=lim*.8) av.push({cls:t>=lim?"vencido":"info",orden:50,html:`<span>${t>=lim?`Te pasaste del límite de <b>${esc(c.n)}</b> por ${fmt(t-lim)}`:`Vas en ${Math.round(t/lim*100)}% del límite de <b>${esc(c.n)}</b>: quedan ${fmt(lim-t)}`}</span>`});
   });
+  // cada semana, invitar a cuadrar con el banco
+  let cuLuego=""; try{cuLuego=localStorage.getItem("tebille.cuadreLuego")||""}catch{}
+  if(ajustes.saldoFijado&&movs.length&&(ajustes.ultimoCuadre||"")<sumarDias(hoy(),-7)&&cuLuego<sumarDias(hoy(),-3))
+    av.push({cls:"info",orden:-90,html:`<span>🏦 ¿Cuadramos con tu banco? Toma 10 segundos y así nada se te escapa.</span><span class="actions"><button class="primary sm" data-avcuadre="si">Cuadrar</button><button class="ghost sm" data-avcuadre="no">Luego</button></span>`});
   // recordatorio de la noche: si hoy no has anotado nada
   let recOff=""; try{recOff=localStorage.getItem("tebille.recOff")||""}catch{}
   if(new Date().getHours()>=19&&recOff!==hoy()&&!movs.some(g=>g.fecha===hoy()))
@@ -1662,6 +1712,8 @@ function renderAvisos(){
 }
 $("avisos").onclick=e=>{
   const b=e.target.closest("[data-avpagar]"); if(b) pagarFijo(b.dataset.avpagar);
+  const cu=e.target.closest("[data-avcuadre]");
+  if(cu){ if(cu.dataset.avcuadre==="si") abrirCuadre(); else {try{localStorage.setItem("tebille.cuadreLuego",hoy())}catch{} renderAvisos()} return }
   const r=e.target.closest("[data-avrec]"); if(!r) return;
   try{localStorage.setItem("tebille.recOff",hoy())}catch{}
   if(r.dataset.avrec==="anotar"){$("form").scrollIntoView({behavior:"smooth",block:"start"});$("f-monto").focus()} else toast("¡Bien! Un día sin gastos 🌱");
@@ -1771,7 +1823,8 @@ function renderResumen(){
     (ahorroNeto?tile("A bolsillos",signed(ahorroNeto),"Guardado menos sacado"):"")+
     (sum(a.pag)?tile("Pagos a tarjetas",fmt(sum(a.pag)),`${a.pag.length} pago${a.pag.length===1?"":"s"}`):"")+
     (rendEst>0?tile("Rindió tu cajita",`≈ ${fmt(rendEst)}`,"Rendimiento estimado","pos"):"")+
-    (fG.length?tile("Gastos fijos",`${fP.length} de ${fG.length}`,"pagados este mes"):"");
+    (fG.length?tile("Gastos fijos",`${fP.length} de ${fG.length}`,"pagados este mes"):"")+
+    (sum(a.gas.filter(g=>g.cuadre))?tile("Sin anotar",fmt(sum(a.gas.filter(g=>g.cuadre))),"Se te escapó (lo encontraste al cuadrar)"):"");
   // por categoría, comparado con el mes anterior
   const filas=CATS.gasto.map(c=>{const x=sum(a.gas.filter(g=>catOf(g).id===c.id)), p=sum(b.gas.filter(g=>catOf(g).id===c.id));return {c,x,p}}).filter(r=>r.x||r.p).sort((r,s)=>s.x-r.x);
   $("rCats").innerHTML=filas.length?`<span class="label">Gastos por categoría</span><div class="r-tabla-wrap"><table class="r-tabla"><thead><tr><th>Categoría</th><th class="n">Este mes</th><th class="n">Mes anterior</th><th class="n">Cambio</th></tr></thead><tbody>`+
@@ -2300,7 +2353,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden){const n=n
 
 /* ---------- actualizaciones ---------- */
 // Sube este número junto con VERSION en sw.js cada vez que publiques
-const APP_VERSION=33;
+const APP_VERSION=34;
 $("appVersion").textContent=`Versión ${APP_VERSION}`;
 let swReg=null;
 if("serviceWorker" in navigator){
@@ -2378,7 +2431,7 @@ function renderAtajo(){
   const tiene=!!claveAtajo;
   if(!claveConfirm) $("claveBtn").textContent=tiene?"Cambiar la clave":"Crear mi clave del atajo";
   $("probarBtn").hidden=!tiene; $("atajoDatos").hidden=!tiene;
-  if(tiene){$("atajoUrl").textContent=atajoUrl(user.uid);$("atajoJson").textContent=atajoJson(claveAtajo);renderJelly()}
+  if(tiene){$("smsUrl").textContent=`https://tebille.pages.dev/api/sms?u=${user.uid}&k=${claveAtajo}`;$("atajoUrl").textContent=atajoUrl(user.uid);$("atajoJson").textContent=atajoJson(claveAtajo);renderJelly()}
 }
 // Plantilla del atajo en lenguaje Jelly (atajo-tebille.jelly) con el usuario y la clave ya puestos
 let plantillaJelly=null;
@@ -2419,6 +2472,49 @@ document.addEventListener("click",async e=>{
   try{await navigator.clipboard.writeText(el.textContent);toast("Copiado")}
   catch{const r=document.createRange();r.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(r);toast("Texto seleccionado: cópialo")}
 });
+
+/* ---------- cuadrar con el banco ---------- */
+function abrirCuadre(){location.hash="inicio";$("cuadreForm").hidden=false;$("cu-real").value="";setTimeout(()=>{$("balance").scrollIntoView({behavior:"smooth",block:"start"});$("cu-real").focus()},80)}
+$("bCuadrar").onclick=()=>{if($("cuadreForm").hidden)abrirCuadre();else $("cuadreForm").hidden=true};
+$("cuCancel").onclick=()=>{$("cuadreForm").hidden=true};
+$("cuadreForm").onsubmit=e=>{
+  e.preventDefault();
+  const real=parseMonto($("cu-real").value); if(isNaN(real)){toast("Escribe cuánto te muestra el banco.");$("cu-real").focus();return}
+  const dif=Math.round((real-saldo())*100)/100;
+  ajustes={...ajustes,ultimoCuadre:hoy()}; putAjustes();
+  if(Math.abs(dif)>=1) putMov({id:newId("g"),tipo:dif<0?"gasto":"ingreso",monto:Math.abs(dif),descripcion:dif<0?"Gastos sin anotar (cuadre)":"Ingresos sin anotar (cuadre)",categoria:dif<0?"otros":"otros_ing",fecha:hoy(),metodo:"Cuadre",cuadre:true,creado:Date.now()});
+  $("cuadreForm").hidden=true; render();
+  toast(Math.abs(dif)<1?"¡Perfecto! Tu saldo ya cuadra con el banco ✓":dif<0?`Cuadrado: se te escaparon ${fmt(-dif)} en gastos. Ya quedó igual al banco.`:`Cuadrado: tenías ${fmt(dif)} más de lo anotado. Ya quedó igual al banco.`);
+};
+
+/* ---------- gastos fijos que se anotan solos ---------- */
+// con la nube, espera a tener los movimientos reales para no anotar dos veces; el id fijo por mes evita duplicados entre dispositivos
+let nubeLista=true;
+function autoFijos(){
+  if(!nubeLista) return;
+  const y=today.getFullYear(), m=today.getMonth(), mk=monthKey(y,m);
+  fijos.forEach(f=>{
+    if(!f.auto||f.saltado===mk||fjMov(f,y,m)) return;
+    const dia=fjDia(f,y,m), fecha=`${mk}-${pad(dia)}`;
+    if(dia>today.getDate()) return;
+    if(f.creado&&dateStr(new Date(f.creado))>=fecha) return; // lo creaste después del día: este mes lo anotas tú
+    putMov({id:`fx${f.id}${mk.replace("-","")}`,tipo:f.tipo==="ingreso"?"ingreso":"gasto",monto:+f.monto,descripcion:f.nombre,categoria:f.categoria,fecha,metodo:f.metodo||"",fijo:f.id,auto:true,creado:Date.now()});
+  });
+}
+// compras con tarjeta de crédito que llegaron por SMS: se suman a la tarjeta de ese banco (o a la única que tengas)
+function asignarCreditos(){
+  if(!nubeLista||!tarjetas.length) return;
+  movs.filter(g=>g.credito&&!g.tarjeta).forEach(g=>{
+    const b=norm(g.banco), t=(b&&tarjetas.find(t=>norm(t.banco)===b||norm(t.banco).includes(b)))||(tarjetas.length===1?tarjetas[0]:null);
+    if(t) putMov({...g,tarjeta:t.id});
+  });
+}
+$("smsProbar").onclick=async()=>{
+  const t=$("smsPrueba").value.trim(); if(!t){toast("Pega un mensaje de tu banco.");return}
+  $("smsRes").textContent="Revisando…";
+  try{const r=await fetch("/api/sms?probar=1",{method:"POST",body:new URLSearchParams({texto:t})}); $("smsRes").textContent=await r.text()}
+  catch{$("smsRes").textContent="No se pudo probar. Revisa tu conexión."}
+};
 
 /* ---------- proyección del fin de mes ---------- */
 // saldo de hoy − gastos fijos que faltan + ingresos fijos que faltan + lo ya programado − ritmo de gasto diario × días que quedan
@@ -2820,7 +2916,7 @@ $("f-ocr").onclick=async()=>{
 
 /* ---------- menú de 3 rayas y vistas ---------- */
 // Cada sección tiene data-view; el menú cambia la vista con #inicio, #tarjetas, etc. (el botón atrás de Android funciona)
-const VISTAS={inicio:"",tarjetas:"Tarjetas de crédito",cuenta:"Cuenta y nube",atajo:"Atajo del iPhone",ahorros:"Bolsillos de ahorro",fijos:"Gastos fijos",deudas:"Me deben y debo",resumen:"Resumen del mes",calendario:"Calendario",patrimonio:"Patrimonio neto",retos:"Retos de ahorro",ajustes:"Ajustes",iphone:"Instalar en iPhone",acerca:"Acerca de Tebille"};
+const VISTAS={inicio:"",tarjetas:"Tarjetas de crédito",cuenta:"Cuenta y nube",atajo:"Atajo y mensajes del banco",ahorros:"Bolsillos de ahorro",fijos:"Gastos fijos",deudas:"Me deben y debo",resumen:"Resumen del mes",calendario:"Calendario",patrimonio:"Patrimonio neto",retos:"Retos de ahorro",ajustes:"Ajustes",iphone:"Instalar en iPhone",acerca:"Acerca de Tebille"};
 let vistaActual="inicio";
 function mostrarVista(){
   let v=location.hash.slice(1); if(!(v in VISTAS)) v="inicio";

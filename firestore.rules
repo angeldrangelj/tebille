@@ -7,7 +7,7 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
-    // El atajo del iPhone no inicia sesión: puede CREAR un movimiento
+    // El atajo del iPhone (y la lectura de SMS del banco, /api/sms) no inicia sesión: puede CREAR un movimiento
     // solo si trae la clave secreta que la persona generó en la app.
     match /users/{uid}/movs/{id} {
       function claveAtajo() {
@@ -18,7 +18,7 @@ service cloud.firestore {
       allow create: if request.auth == null
         && exists(/databases/$(database)/documents/users/$(uid)/privado/atajo)
         && d().clave is string && d().clave.size() >= 20 && d().clave == claveAtajo()
-        && d().keys().hasOnly(['tipo', 'monto', 'categoria', 'descripcion', 'fecha', 'metodo', 'clave', 'origen'])
+        && d().keys().hasOnly(['tipo', 'monto', 'categoria', 'descripcion', 'fecha', 'metodo', 'clave', 'origen', 'credito', 'banco'])
         && d().keys().hasAll(['tipo', 'monto', 'categoria', 'fecha', 'clave'])
         && d().tipo in ['gasto', 'ingreso']
         && d().monto is number && d().monto > 0 && d().monto < 1000000000000
@@ -26,7 +26,9 @@ service cloud.firestore {
         && d().fecha is string && d().fecha.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
         && (!('descripcion' in d()) || (d().descripcion is string && d().descripcion.size() <= 80))
         && (!('metodo' in d()) || (d().metodo is string && d().metodo.size() <= 20))
-        && (!('origen' in d()) || d().origen == 'atajo');
+        && (!('origen' in d()) || d().origen in ['atajo', 'sms'])
+        && (!('credito' in d()) || d().credito is bool)
+        && (!('banco' in d()) || (d().banco is string && d().banco.size() <= 30));
     }
   }
 }
