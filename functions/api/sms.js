@@ -39,7 +39,28 @@ export function entenderWallet(p) {
   const comercio = String(p.comercio || "").replace(/\s+/g, " ").trim().slice(0, 80) || "Compra con Apple Pay";
   const tarjeta = norm(p.tarjeta);
   return { tipo: "gasto", monto, descripcion: comercio, categoria: categoriaDe(comercio),
-    credito: /^(si|sí|1|true|credito)$/i.test(String(p.credito || "").trim()) || /credit|credito/.test(tarjeta), banco: buscarBanco(tarjeta) };
+    credito: /^(no|0|false|debito)$/i.test(String(p.credito || "").trim()) ? false : /^(si|sí|1|true|credito)$/i.test(String(p.credito || "").trim()) || /credit|credito/.test(tarjeta), banco: buscarBanco(tarjeta) };
+}
+
+// Atajo "Tebille Apple Pay": la automatización le pasa la compra y el atajo la manda como texto.
+// Puede llegar como datos (JSON) o como texto con el valor, el comercio y la tarjeta.
+export function entenderBilletera(p) {
+  const t = String(p.texto || "").trim();
+  if (!t) return { error: "No llegaron los datos de la compra. Revisa que la automatización use «Ejecutar atajo» con la entrada del atajo." };
+  try {
+    const o = JSON.parse(t);
+    if (o && typeof o === "object") {
+      const v = k => Object.entries(o).find(([x]) => new RegExp(k, "i").test(x))?.[1];
+      return entenderWallet({ monto: v("amount|importe|monto|valor"), comercio: v("merchant|comercio"), tarjeta: v("card|tarjeta|pass|pase|name|nombre"), credito: p.credito });
+    }
+  } catch {}
+  // primero un valor con $ o con separadores de miles; si no, cualquier número (sin tomar los últimos 4 de la tarjeta)
+  const m = t.match(/(?:\$|cop)\s*[\d.,]*\d|\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{1,2})?/i) || t.match(/(?<![•*·x])\b\d+(?:[.,]\d{1,2})?\b/i);
+  if (!m) return { error: `No encontré el valor de la compra en: «${t.slice(0, 100)}»` };
+  const banco = buscarBanco(norm(t));
+  const comercio = t.replace(m[0], " ").replace(/\b(cop|usd)\b|\$/gi, " ").replace(/[•*·]+\s*\d{2,4}/g, " ")
+    .replace(banco ? new RegExp(`(^|\\s)${banco}(?=\\s|$)`, "gi") : /$^/, " ").replace(/\s+/g, " ").trim();
+  return entenderWallet({ monto: m[0], comercio, tarjeta: t, credito: p.credito });
 }
 
 // "$45.900,00" · "$ 1.200.000" · "COP 50.000" · "por 45900"
@@ -95,7 +116,7 @@ async function datos(request) {
 async function manejar(request) {
   const p = await datos(request);
   const uid = String(p.u || "").trim(), clave = String(p.k || "").trim();
-  const r = p.monto && !p.texto ? entenderWallet(p) : entender(p.texto);
+  const r = p.monto && !p.texto ? entenderWallet(p) : p.billetera ? entenderBilletera(p) : entender(p.texto);
   if (p.probar) return texto(r.error ? `No se anotaría: ${r.error}` : `Entendí: ${r.tipo} de ${new Intl.NumberFormat("es-CO").format(r.monto)} · ${r.descripcion} · ${r.categoria}${r.credito ? " · tarjeta de crédito" : ""}${r.banco ? " · " + r.banco : ""}`);
   if (!/^[A-Za-z0-9]{10,64}$/.test(uid) || clave.length < 20) return texto("Falta tu usuario o tu clave. Copia la dirección otra vez desde Tebille.", 400);
   if (r.error) return texto(`No se anotó: ${r.error}`, 422);
@@ -103,7 +124,7 @@ async function manejar(request) {
   const fields = {
     tipo: { stringValue: r.tipo }, monto: { doubleValue: r.monto }, categoria: { stringValue: r.categoria },
     descripcion: { stringValue: r.descripcion }, fecha: { stringValue: hoyColombia() },
-    metodo: { stringValue: p.monto && !p.texto ? "Apple Pay" : r.credito ? "Crédito" : "Débito" }, origen: { stringValue: "sms" }, clave: { stringValue: clave },
+    metodo: { stringValue: (p.monto && !p.texto) || p.billetera ? "Apple Pay" : r.credito ? "Crédito" : "Débito" }, origen: { stringValue: "sms" }, clave: { stringValue: clave },
   };
   if (r.credito) fields.credito = { booleanValue: true };
   if (r.banco) fields.banco = { stringValue: r.banco.slice(0, 30) };
